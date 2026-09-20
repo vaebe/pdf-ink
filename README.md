@@ -31,6 +31,27 @@ vp preview
 pnpm sync:pdfjs
 ```
 
+## PR 自动检查
+
+每次创建或更新 PR，`.github/workflows/pr-review.yml` 自动执行差异检查、生产构建和完整测试，
+结果分别显示为 `diff`、`build`、`tests`。本地可使用相同入口：
+
+```bash
+vp run review:diff origin/main # 将基准替换为 PR 的目标分支，本地需已有该引用
+vp run review:build            # PDF.js 资源同步、Vue 类型检查、生产构建
+vp run review:tests            # 全部 Vitest 项目；需先按下文安装浏览器并启动应用
+```
+
+差异检查比较基准与 HEAD 的共同祖先到 HEAD，仅覆盖已提交改动；先检查差异空白，
+再对新增、修改或重命名的代码和文档运行 `vp check`，不自动修复文件。
+类型分析沿用项目配置，可能涉及变更文件依赖的模块。CI 检查 GitHub 生成的 PR 合并提交。
+未提交改动不在本地 `review:diff` 范围内。
+
+测试任务安装 Chromium 及系统依赖，提前生成夹具，再启动固定在 5199 端口的应用服务。
+服务就绪后运行全部 Vitest 项目（数值契约和浏览器验收），成功后再执行第二轮浏览器验收，
+对应审核清单的连续两轮要求。两轮产物分别写入 runner 临时目录，避免触发应用整页重载。
+`tests/manual` 下的手动探针和历史诊断脚本不属于自动测试套件。
+
 ## 测试
 
 测试由 Vite+ / Vitest 统一执行。数值项目在 Node 中调用真实的 pdfjs-dist 与 pdf-lib；

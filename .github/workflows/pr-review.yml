@@ -1,0 +1,80 @@
+name: PR Review
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: ${{ matrix.check }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [diff, build, tests]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1.21.0
+        with:
+          node-version: "24"
+          cache: true
+          run-install: false
+
+      - name: Install dependencies
+        run: vp install --frozen-lockfile
+
+      - name: Check PR diff
+        if: matrix.check == 'diff'
+        run: vp run review:diff "$PR_BASE_SHA"
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+
+      - name: Check types and build
+        if: matrix.check == 'build'
+        run: vp run review:build
+
+      - name: Install Chromium and system dependencies
+        if: matrix.check == 'tests'
+        run: vp exec playwright-core install --with-deps chromium
+
+      - name: Prepare test fixtures
+        if: matrix.check == 'tests'
+        # 先生成夹具，避免验收期间写入仓库触发开发服务器整页重载。
+        run: vp run fixtures:make
+
+      - name: Run full test suite and repeat browser acceptance
+        if: matrix.check == 'tests'
+        env:
+          PDFINK_APP: http://localhost:5199/
+          PDFINK_OUT: ${{ runner.temp }}/pdf-ink-tests/round-1
+        run: |
+          vp run dev --port 5199 --strictPort > "$RUNNER_TEMP/pdf-ink-dev.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+
+          curl --fail --silent --show-error --retry 60 --retry-connrefused \
+            --retry-delay 1 --retry-max-time 90 --max-time 2 "$PDFINK_APP" > /dev/null
+          kill -0 "$server_pid"
+
+          vp run review:tests
+          PDFINK_OUT="$RUNNER_TEMP/pdf-ink-tests/round-2" vp test --run --project acceptance
+
+      - name: Show application log on failure
+        if: failure() && matrix.check == 'tests'
+        run: |
+          if [ -f "$RUNNER_TEMP/pdf-ink-dev.log" ]; then
+            cat "$RUNNER_TEMP/pdf-ink-dev.log"
+          fi
