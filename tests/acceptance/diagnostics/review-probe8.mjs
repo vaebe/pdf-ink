@@ -19,22 +19,22 @@ const styleOf = (text) =>
     return { classes: button.className, border: s.borderColor, bg: s.backgroundColor };
   }, text);
 
-console.log("适合宽度 静止:", JSON.stringify(await styleOf("适合宽度")));
-await page.locator("[data-testid=toolbar] button", { hasText: "适合宽度" }).hover();
+console.log("自适应宽度 静止:", JSON.stringify(await styleOf("自适应宽度")));
+await page.locator("[data-testid=toolbar] button", { hasText: "自适应宽度" }).hover();
 await page.waitForTimeout(200);
-console.log("适合宽度 hover:", JSON.stringify(await styleOf("适合宽度")));
+console.log("自适应宽度 hover:", JSON.stringify(await styleOf("自适应宽度")));
 
-await page.locator("[data-testid=toolbar] button", { hasText: "适合宽度" }).click();
+await page.locator("[data-testid=toolbar] button", { hasText: "自适应宽度" }).click();
 await page.mouse.move(700, 800);
 await page.waitForTimeout(200);
-console.log("关闭 toggled 后 静止:", JSON.stringify(await styleOf("适合宽度")));
-await page.locator("[data-testid=toolbar] button", { hasText: "适合宽度" }).hover();
+console.log("关闭 toggled 后 静止:", JSON.stringify(await styleOf("自适应宽度")));
+await page.locator("[data-testid=toolbar] button", { hasText: "自适应宽度" }).hover();
 await page.waitForTimeout(200);
-console.log("关闭 toggled 后 hover:", JSON.stringify(await styleOf("适合宽度")));
+console.log("关闭 toggled 后 hover:", JSON.stringify(await styleOf("自适应宽度")));
 
 // 再切回 toggled，观察 hover 是否覆盖激活态
-await page.locator("[data-testid=toolbar] button", { hasText: "适合宽度" }).click();
+await page.locator("[data-testid=toolbar] button", { hasText: "自适应宽度" }).click();
 await page.mouse.move(700, 800);
 await page.waitForTimeout(200);
-console.log("恢复 toggled 后 hover:", JSON.stringify(await styleOf("适合宽度")));
+console.log("恢复 toggled 后 hover:", JSON.stringify(await styleOf("自适应宽度")));
 await browser.close();

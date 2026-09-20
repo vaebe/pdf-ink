@@ -51,9 +51,9 @@ function log(s) {
   await page.waitForTimeout(400);
   const afterIn2 = await zoomText(page);
   log(`S2 3600x1000: before=${before} afterZoomIn=${afterIn} afterZoomIn2=${afterIn2}`);
-  // click 适合宽度 to recover
+  // click 自适应宽度 to recover
   try {
-    await page.getByText("适合宽度", { exact: true }).click();
+    await page.getByText("自适应宽度", { exact: true }).click();
     await page.waitForTimeout(400);
     const afterFit = await zoomText(page);
     log(`S2 fit-width recover: afterFit=${afterFit}`);

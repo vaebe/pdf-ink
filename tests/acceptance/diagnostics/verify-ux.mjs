@@ -31,8 +31,8 @@ async function setupBook(page) {
   await page.locator("[data-testid=page-input]").fill("30");
   await page.locator("[data-testid=page-input]").press("Enter");
   await sleep(600);
-  // turn OFF fit-width (default on) -> fixed zoom 125%
-  const fitBtn = page.locator('button:has-text("适合宽度")');
+  // ensure fit-width is OFF (product default is off now) -> fixed zoom 125%
+  const fitBtn = page.locator('button:has-text("自适应宽度")');
   const toggled = await fitBtn.evaluate((el) => el.classList.contains("button--toggled"));
   if (toggled) await fitBtn.click();
   await sleep(300);

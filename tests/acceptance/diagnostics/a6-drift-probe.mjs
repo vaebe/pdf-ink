@@ -16,7 +16,7 @@ import { chromium, launchOptions, APP, FIX } from "../harness.mjs";
 
 const DELTA = { dx: 70, dy: -40 };
 const ZOOMS = [
-  { label: "适合宽度", steps: 0, zoomIn: false },
+  { label: "自适应宽度", steps: 0, zoomIn: false },
   { label: "缩小到 50%", steps: 5, zoomIn: false },
   { label: "放大到 250%", steps: 8, zoomIn: true },
 ];
@@ -225,7 +225,7 @@ try {
   await placeOnPage(page, 0, 0.5, 0.5);
 
   for (const scenario of ZOOMS) {
-    const fitButton = page.locator("button", { hasText: "适合宽度" });
+    const fitButton = page.locator("button", { hasText: "自适应宽度" });
     const fitToggled = await fitButton.evaluate((element) =>
       element.classList.contains("button--toggled"),
     );

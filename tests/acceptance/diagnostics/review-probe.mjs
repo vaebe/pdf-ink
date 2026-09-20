@@ -1,7 +1,7 @@
 // 审查探针（只读，不改动项目文件）：
 // 1) 手写弹窗画布的分辨率是否按「入场动画中的缩放盒子」计算（疑似缺陷）
 // 2) 链接层与文字层的命中顺序（链接是否真的可点）
-// 3) 同属性双工具类：适合宽度按钮的 toggled 态是否生效
+// 3) 同属性双工具类：自适应宽度按钮的 toggled 态是否生效
 // 4) 深色模式主按钮的文字对比度
 
 import { chromium, launchOptions, APP, FIX } from "../harness.mjs";
@@ -134,10 +134,10 @@ check(
   `popup=${popupOpened}, 外发请求=${JSON.stringify(externalRequests)}`,
 );
 
-// ---------- 3) 适合宽度按钮的 toggled 态 ----------
+// ---------- 3) 自适应宽度按钮的 toggled 态 ----------
 const toggleProbe = await page.evaluate(() => {
   const buttons = [...document.querySelectorAll("[data-testid=toolbar] button")];
-  const target = buttons.find((button) => button.textContent?.trim() === "适合宽度");
+  const target = buttons.find((button) => button.textContent?.trim() === "自适应宽度");
   if (!target) return { error: "未找到按钮" };
   const style = getComputedStyle(target);
   return {
@@ -147,9 +147,9 @@ const toggleProbe = await page.evaluate(() => {
     color: style.color,
   };
 });
-console.log("  适合宽度按钮:", JSON.stringify(toggleProbe));
+console.log("  自适应宽度按钮:", JSON.stringify(toggleProbe));
 check(
-  "适合宽度按钮处于 toggled 态（accent 描边而非灰色）",
+  "自适应宽度按钮处于 toggled 态（accent 描边而非灰色）",
   toggleProbe.classes?.includes("button--toggled") &&
     !toggleProbe.borderColor.includes("220, 223, 230") &&
     !toggleProbe.borderColor.includes("rgb(220, 223, 230)"),

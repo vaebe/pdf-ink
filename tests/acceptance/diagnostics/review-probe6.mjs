@@ -9,7 +9,7 @@ await page.goto(APP, { waitUntil: "domcontentloaded" });
 const read = () =>
   page.evaluate(() => {
     const button = [...document.querySelectorAll("[data-testid=toolbar] button")].find(
-      (item) => item.textContent?.trim() === "适合宽度",
+      (item) => item.textContent?.trim() === "自适应宽度",
     );
     const style = getComputedStyle(button);
     return {
@@ -21,7 +21,7 @@ const read = () =>
   });
 
 console.log("静止（toggled）:", JSON.stringify(await read()));
-await page.locator("[data-testid=toolbar] button", { hasText: "适合宽度" }).hover();
+await page.locator("[data-testid=toolbar] button", { hasText: "自适应宽度" }).hover();
 await page.waitForTimeout(120);
 console.log("hover（toggled）:", JSON.stringify(await read()));
 await browser.close();

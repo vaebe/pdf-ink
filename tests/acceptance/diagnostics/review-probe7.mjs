@@ -34,18 +34,18 @@ await page.mouse.move(700, 800);
 await page.keyboard.press("Escape");
 await page.waitForTimeout(300);
 
-// B. toggled 按钮「适合宽度」
-console.log("B toggled 静止:", JSON.stringify(await styleOf("适合宽度")));
-await page.locator("[data-testid=toolbar] button", { hasText: "适合宽度" }).hover();
+// B. toggled 按钮「自适应宽度」
+console.log("B toggled 静止:", JSON.stringify(await styleOf("自适应宽度")));
+await page.locator("[data-testid=toolbar] button", { hasText: "自适应宽度" }).hover();
 await page.waitForTimeout(150);
-console.log("B toggled hover:", JSON.stringify(await styleOf("适合宽度")));
+console.log("B toggled hover:", JSON.stringify(await styleOf("自适应宽度")));
 
 // C. 关掉 toggled 后再 hover（此时只有 ghost 类）
-await page.locator("[data-testid=toolbar] button", { hasText: "适合宽度" }).click();
+await page.locator("[data-testid=toolbar] button", { hasText: "自适应宽度" }).click();
 await page.mouse.move(700, 800);
 await page.waitForTimeout(200);
-console.log("C 关闭后静止:", JSON.stringify(await styleOf("适合宽度")));
-await page.locator("[data-testid=toolbar] button", { hasText: "适合宽度" }).hover();
+console.log("C 关闭后静止:", JSON.stringify(await styleOf("自适应宽度")));
+await page.locator("[data-testid=toolbar] button", { hasText: "自适应宽度" }).hover();
 await page.waitForTimeout(150);
-console.log("C 关闭后 hover:", JSON.stringify(await styleOf("适合宽度")));
+console.log("C 关闭后 hover:", JSON.stringify(await styleOf("自适应宽度")));
 await browser.close();

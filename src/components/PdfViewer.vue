@@ -14,7 +14,7 @@ const emit = defineEmits<{
   "update:effectiveScale": [scale: number];
 }>();
 
-/** 页面两侧的留白，参与“适合宽度”的计算。 */
+/** 页面两侧的留白，参与「自适应宽度」的计算。 */
 const VIEWER_PADDING = 32;
 
 const { session, documentId } = usePdfDocument();
@@ -25,7 +25,7 @@ const effectiveScale = ref(props.zoom);
 
 const pages = computed(() => session.value?.pages ?? []);
 
-/** 以第一页的宽度作为“适合宽度”的基准，缩放比例不会随滚动跳变。 */
+/** 以第一页的宽度作为「自适应宽度」的基准，缩放比例不会随滚动跳变。 */
 const referenceBaseWidth = computed(() => {
   const first = pages.value[0];
   if (!first) {

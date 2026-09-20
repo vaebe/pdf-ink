@@ -1168,7 +1168,7 @@ try {
   await pickTemplate(hidpiPage, 0);
   await placeOnPage(hidpiPage, 0, 0.5, 0.5);
   const zoomScenarios = [
-    { label: "适合宽度", steps: 0, zoomIn: false },
+    { label: "自适应宽度", steps: 0, zoomIn: false },
     { label: "缩小到 50%", steps: 5, zoomIn: false },
     { label: "放大到 250%", steps: 8, zoomIn: true },
   ];
@@ -1176,12 +1176,13 @@ try {
   const drift = [];
   const ratios = [];
   for (const scenario of zoomScenarios) {
-    // 每档都先回到「适合宽度」再调整倍率，避免累计误差掩盖真实行为。
+    // 每档都先回到「自适应宽度」再调整倍率，避免累计误差掩盖真实行为。
+    // 定位走 data-testid：按钮文案改过一次（适合宽度 → 自适应宽度），绑文字会跟着一起烂。
     const fitToggled = await hidpiPage
-      .locator("button", { hasText: "适合宽度" })
+      .locator("[data-testid=fit-width]")
       .evaluate((element) => element.classList.contains("button--toggled"));
     if (!fitToggled) {
-      await hidpiPage.locator("button", { hasText: "适合宽度" }).click();
+      await hidpiPage.locator("[data-testid=fit-width]").click();
       await hidpiPage.waitForTimeout(500);
     }
     for (let step = 0; step < scenario.steps; step += 1) {
@@ -1220,7 +1221,7 @@ try {
     const scrollBefore = await hidpiPage.evaluate(
       () => document.querySelector("[data-testid=pdf-scroller]")?.scrollTop ?? 0,
     );
-    // 放置模式此刻是否仍武装。第一档「适合宽度」下，循环里的放置点击会落在刚放好的
+    // 放置模式此刻是否仍武装。第一档「自适应宽度」下，循环里的放置点击会落在刚放好的
     // 实例上，产品既不会放置也不会退出放置模式，于是这次拖动是在武装状态下进行的——
     // 这一项就是把该情形与「拖动位移被 clamp 吃掉」区分开的证据。
     const armedBeforeDrag = await hidpiPage
@@ -1294,7 +1295,7 @@ try {
   // 少了同层的 toggled hover 规则，激活按钮一悬停就会掉回普通 ghost 配色。
   // 同时用「缩小」这个真 ghost 按钮做对照，确认 ghost 自己的 hover 仍然生效。
   // 放在截图之后，避免截图里鼠标停在按钮上。
-  const fitButton = hidpiPage.locator("[data-testid=toolbar] button", { hasText: "适合宽度" });
+  const fitButton = hidpiPage.locator("[data-testid=fit-width]");
   const plainGhost = hidpiPage.locator('[data-testid=toolbar] button[title="缩小"]');
   const fitToggledBefore = await fitButton.evaluate((element) =>
     element.classList.contains("button--toggled"),

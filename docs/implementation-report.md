@@ -96,8 +96,8 @@
 
 ### S4 阅读体验与正式下载
 
-- `src/components/PdfToolbar.vue`：打开、文件名、页码、缩放、适合宽度、撤销／重做、下载。
-- `src/components/PdfViewer.vue`：多页连续阅读、滚动检测当前页、页码跳转、适合宽度基准。
+- `src/components/PdfToolbar.vue`：打开、文件名、页码、缩放、自适应宽度、撤销／重做、下载。
+- `src/components/PdfViewer.vue`：多页连续阅读、滚动检测当前页、页码跳转、自适应宽度基准。
 - `src/components/PageThumbnails.vue`：缩略图按需渲染，离开视野取消渲染任务。
 - `PdfPage.vue`：以 IntersectionObserver 只渲染可见页及相邻预取范围（`rootMargin: 900px`），
   离开视野时取消渲染任务；同一画布的新渲染前先取消旧任务。

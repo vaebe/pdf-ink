@@ -145,9 +145,11 @@ function toggleFitWidth(): void {
         class="button button--ghost"
         :class="{ 'button--toggled': props.fitWidth }"
         :disabled="props.pageCount === 0"
+        title="自适应宽度（页面宽度跟随窗口）"
+        data-testid="fit-width"
         @click="toggleFitWidth"
       >
-        适合宽度
+        自适应宽度
       </button>
     </div>
 

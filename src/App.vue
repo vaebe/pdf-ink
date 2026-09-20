@@ -20,6 +20,12 @@ import SignaturePadDialog from "./components/SignaturePadDialog.vue";
 
 const ZOOM_STEPS = [0.4, 0.5, 0.67, 0.8, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4] as const;
 
+/**
+ * 固定缩放的默认倍率：关闭「自适应宽度」时用它作为初始与换文档后的倍率。
+ * 三个使用点（zoom / effectiveScale 的初值、新会话重置）共用它，避免数值漂移。
+ */
+const DEFAULT_SCALE = 1.25;
+
 const {
   session,
   documentId,
@@ -40,9 +46,10 @@ const { dialog: confirmDialog, isConfirmOpen, requestConfirm, settleConfirm } = 
 initSignatureEditor();
 
 const currentPage = ref(0);
-const zoom = ref(1.25);
-const fitWidth = ref(true);
-const effectiveScale = ref(1.25);
+const zoom = ref(DEFAULT_SCALE);
+// 默认使用固定缩放：不自动切到「自适应宽度」，打开文档时也保持关闭。
+const fitWidth = ref(false);
+const effectiveScale = ref(DEFAULT_SCALE);
 const emptyStateInputRef = ref<HTMLInputElement | null>(null);
 const isPadOpen = ref(false);
 const isExporting = ref(false);
@@ -101,7 +108,10 @@ const hasUnsavedEdits = computed(() => !samePlacements(placements.value, exportB
 // 旧文档的页码、缩放模式与滚动位置得以保留。
 watch(documentId, () => {
   currentPage.value = 0;
-  fitWidth.value = true;
+  // 新会话回到默认的固定缩放：既不自动切到「自适应宽度」，倍率也回到默认值
+  // （关闭自适应后倍率就是实际显示比例，沿用上一次的 400% 之类会让人以为没重置）。
+  fitWidth.value = false;
+  zoom.value = DEFAULT_SCALE;
   // 新会话的实例列表已由编辑器重置为空，导出基准同样从空列表开始。
   exportBaseline.value = [];
 });
@@ -161,7 +171,7 @@ async function handleOpenFile(file: File): Promise<void> {
     }
   }
   exportError.value = null;
-  // 页码与「适合宽度」的重置推迟到会话成功切换后（watch(documentId)）：
+  // 页码、缩放倍率与「自适应宽度」的重置推迟到会话成功切换后（watch(documentId)）：
   // 取消确认、读取失败或过期请求时，旧文档的阅读状态保持不变。
   await openFile(file, { confirmSignedDocument: confirmSignedDocumentEdit });
 }

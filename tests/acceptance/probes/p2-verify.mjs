@@ -114,8 +114,9 @@ try {
   await openApp(geometryPage);
   await openPdf(geometryPage, "plain.pdf", 2);
 
-  // 关掉「适合宽度」（默认开启），再放大到页面明显宽于容器。
-  const fitButton = geometryPage.locator("[data-testid=toolbar] button", { hasText: "适合宽度" });
+  // 确保「自适应宽度」是关的（产品默认已关闭，这里仍按状态判断，不假设默认值），
+  // 再放大到页面明显宽于容器。
+  const fitButton = geometryPage.locator("[data-testid=fit-width]");
   const fitOn = await fitButton.evaluate((element) =>
     element.classList.contains("button--toggled"),
   );
@@ -226,7 +227,7 @@ try {
       };
     });
 
-  // 用例一：贴着左边缘点。适合宽度下页面比滚动容器高，下边界点不到，留到用例二。
+  // 用例一：贴着左边缘点。默认缩放下页面比滚动容器高，下边界点不到，留到用例二。
   const scrollerBox = await edgePage.locator("[data-testid=pdf-scroller]").boundingBox();
   const pageBox = await edgePage.locator('.pdf-page[data-page-index="0"]').boundingBox();
   const leftClick = {
@@ -430,7 +431,7 @@ try {
   );
 
   // 高缩放：页面宽于容器时逐页浏览，离屏占用同样应归零。
-  const fitButtonLong = longPage.locator("[data-testid=toolbar] button", { hasText: "适合宽度" });
+  const fitButtonLong = longPage.locator("[data-testid=fit-width]");
   const fitOnLong = await fitButtonLong.evaluate((element) =>
     element.classList.contains("button--toggled"),
   );

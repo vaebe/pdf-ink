@@ -115,7 +115,7 @@ report(
 );
 
 // ---------- 3. 切换态 hover ----------
-const fitButton = page.locator("[data-testid=toolbar] button", { hasText: "适合宽度" });
+const fitButton = page.locator("[data-testid=fit-width]");
 if (!(await fitButton.evaluate((element) => element.classList.contains("button--toggled")))) {
   await fitButton.click();
   await page.waitForTimeout(600);
