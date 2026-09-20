@@ -1,11 +1,17 @@
 # PDFInk 验收证据
 
-本目录保存 A1—A14 与范围门槛项（B1—B6）的实测证据，对应 `docs/implementation-report.md` 第 6 节。
+本目录保存 A1—A16 与范围门槛项（B1—B6）的实测证据，对应 `docs/implementation-report.md` 第 6 节。
 
 ## 结论
 
-**最新一轮 54/54 项通过**（首轮 34 项、连续多次运行结论一致）。明细见 `acceptance-report.json`
+**已归档一轮 59/59 项通过**（首轮 34 项、连续多次运行结论一致）。明细见 `acceptance-report.json`
 （每一项的 id、结论与实测数值）。
+
+该报告生成于 `2026-09-20T16:18:25.475Z`，对应 A16-3 仍按
+`Tab → Tab → Shift+Tab → Shift+Tab` 执行的脚本。当前脚本已改为点击正文后首先执行
+`Shift+Tab`；调整后的顺序尚无本目录归档结果，不能沿用上述通过结论。
+A15-2 中关于“旧实现会下载坏文件”的说明已更正为“显式忽略加密检查且删除守卫的对照流程”；
+本次仅修正文档，未重新运行验收，原始焦点记录与生成时间保留。
 
 > 变更记录：
 >
@@ -31,6 +37,12 @@
 >    A14-1～A14-4（切换文档后缩略图不空白、无画布停在默认尺寸，含注入 400ms 投递延迟的
 >    确定性竞态复现）、A14-5～A14-7（保存签名不重复写入、窗口期内取消不放行、成功后闸门复位）。
 >    总数 **54 项，连续三轮 id 顺序与逐项结论完全一致**。
+> 7. 第四轮审查的 2 项 P2（均为「新行为缺断言」）修复后新增 A15 / A16 段共 5 条断言
+>    （见 `docs/implementation-report.md` 6.9 节）：A15-1 / A15-2（加密文档无需密码即可打开、
+>    导出必须被拒绝且不产生下载）、A16-1 / A16-2 / A16-3（点击确认框正文后焦点不落到
+>    `document.body`、Esc 仍能关闭、Tab 与 Shift+Tab 都不越出弹窗）。同一轮在 `geometry`
+>    项目新增 4 个用例覆盖导出侧（含「摘掉守卫后同一份输入会成功产出字节」的区分力对照），
+>    并入库夹具 `encrypted-owner-password.pdf`。总数 **59 项，连续两轮 id 顺序与逐项结论完全一致**。
 
 ## 核对方式
 
@@ -131,13 +143,17 @@ A12-1 在统计外发请求时按**完整 URL**（而非整个域名）排除这
 
 ## 复现方式
 
-验收脚本**已纳入版本控制**：见 `tests/acceptance/`（脚本、探针、夹具）与 `tests/acceptance/README.md`
+验收脚本**已纳入版本控制**：见 `tests/`（脚本、探针、夹具）与 `tests/README.md`
 （前置条件、环境变量、运行方式）。本文件只保留某次运行的**结论留档**（截图、导出样本、报告）。
 
-它需要以下外部工具：
+> **工具链已变更**：上文「核对方式」表里的 pypdf / PDFium 记录的是**留档那一轮**的对照工具。
+> 2026-09-20 的测试迁移已移除 Python 依赖，当前流程由 Vitest 驱动，PDF 读回与 PNG 渲染改由
+> `tests/support/pdf.ts` 用 PDF.js / pdf-lib 完成，**不再提供跨 PDF 引擎的自动交叉验证**
+> （PNG 仅供人工查看，无自动像素比对）。要复现本目录的证据文件，按当时的工具链执行即可；
+> 要复现断言结论，用下面的当前流程。
 
-- `playwright-core` + Chromium（Playwright 浏览器缓存中已有的 `chromium-1234`）
-- Python 3.13 隔离环境：`pypdf`、`pypdfium2`、`pillow`
+前置条件：`pnpm install`（`postinstall` 会同步 `public/pdfjs`）与
+`pnpm exec playwright-core install chromium`；不再需要 Python 环境。
 
 运行方式：
 
@@ -145,27 +161,28 @@ A12-1 在统计外发请求时按**完整 URL**（而非整个域名）排除这
 # 1) 生成合成样本（不含任何真实文档）
 pnpm fixtures:make
 
-# 2) 启动应用后执行验收（端口固定 5199，脚本默认指向它）
-vp dev --port 5199
+# 2) 启动应用（端口固定 5199，套件默认指向它；另开一个终端执行下面的命令）
+vp run dev --port 5199 --strictPort
 
-# 3) 单独核对某个 PDF
-python tests/acceptance/python/pdf_probe.py <pdf>            # 页面几何、图片变换矩阵、注解、文字
-python tests/acceptance/python/render_pdfium.py <pdf> <outdir>   # 用 PDFium 逐页渲染
+# 3) 浏览器验收（Vitest，A1—A16 共 59 项断言）
+vp test --project acceptance
 
-# 4) Tailwind 迁移轮新增的样式核对
-node tw-check.mjs    # 迁移前 style.css 的 55 项声明值 vs 真实浏览器计算样式
-node tw-visual.mjs   # 签名库 / 编辑层 / 确认弹窗，浅色 + 深色各一遍
-node dialog-dark.mjs # 重新生成 B2-dialog-signed-pdf-dark.png（验收脚本只跑浅色）
+# 4) 数值契约（纯 Node，不需要浏览器）
+vp test --project geometry
 
-# 5) 审查修复轮新增的独立验证
-node fix-verify.mjs  # 6 条断言：画布尺寸 / 链接命中与点击 / 切换态 hover
-node p2-verify.mjs   # 15 条断言：布局可达性 / 贴边放置 / 离屏资源，含逐条区分力对照
-node p3-verify.mjs   # 13 条断言：切换文档后的缩略图（含推迟投递的竞态复现）/ 保存签名闸门
-node p3-control.mjs apply   # 反向对照：逐片段回退根因，跑 p3-verify 应转红；用完 restore 还原
-node thumb-margin-probe.mjs # 附带核查：缩略图观察器的 240px 余量是否生效
+# 5) 常备探针与历史诊断脚本按需手动执行，不参与 `vp test` 收集
+node tests/manual/probes/fix-verify.mjs         # 6 条断言：画布尺寸 / 链接命中与点击 / 切换态 hover
+node tests/manual/probes/p2-verify.mjs          # 15 条断言：布局可达性 / 贴边放置 / 离屏资源，含逐条区分力对照
+node tests/manual/probes/p3-verify.mjs          # 13 条断言：切换文档后的缩略图（含推迟投递的竞态复现）/ 保存签名闸门
+node tests/manual/probes/p3-control.mjs apply   # 反向对照：逐片段回退根因，跑 p3-verify 应转红；用完 restore 还原
+node tests/manual/probes/thumb-margin-probe.mjs # 附带核查：缩略图观察器的 240px 余量是否生效
+node tests/manual/probes/tw-check.mjs           # 迁移前 style.css 的 55 项声明值 vs 真实浏览器计算样式
+node tests/manual/probes/tw-visual.mjs          # 签名库 / 编辑层 / 确认弹窗，浅色 + 深色各一遍
+node tests/manual/diagnostics/dialog-dark.mjs   # 重新生成 B2-dialog-signed-pdf-dark.png（套件只跑浅色）
 ```
 
-`fix-verify.mjs` / `p2-verify.mjs` / `p3-verify.mjs` 与 `acceptance.mjs` 是相互独立的证据链：后三者除了
+`fix-verify.mjs` / `p2-verify.mjs` / `p3-verify.mjs` 与主套件（`vp test --project acceptance`，
+即 `tests/acceptance/run.mjs`）是相互独立的证据链：后三者除了
 断言正确行为，还额外断言**「换一种测法就会得出相反结论」**，用来证明每条断言确实能区分新旧实现，
 而不是恰好通过：
 

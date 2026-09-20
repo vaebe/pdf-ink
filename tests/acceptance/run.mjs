@@ -1,5 +1,5 @@
 /**
- * PDFInk A1—A14 浏览器验收脚本。
+ * PDFInk A1—A16 浏览器验收脚本。
  * 使用 Playwright 驱动 Chromium 真实操作界面，使用 PDF.js / pdf-lib 读回导出结果并生成 PNG。
  */
 import { execFile } from "node:child_process";
@@ -61,6 +61,8 @@ export async function runAcceptance(onCheck) {
     A12: "全流程无 PDF/签名外发，资源来自预期位置",
     A13: "放大后左边缘可达、贴边放置不越界、长文档离屏释放渲染资源",
     A14: "切换文档后缩略图不空白、保存签名不重复写入",
+    A15: "加密文档（所有者密码 + 空用户口令）能打开但导出被拒绝，且不产生下载",
+    A16: "确认弹窗点击正文后焦点不落到 body、Esc 仍可关闭、Tab 循环不越出弹窗",
   };
 
   // ---------- 通用辅助 ----------
@@ -2146,6 +2148,208 @@ export async function runAcceptance(onCheck) {
       `重开后按钮文案="${padReopened}"，取消可关闭=${padClosed}`,
     );
     await padContext.close();
+
+    // ===================================================================
+    // A15 / A16 —— 第四轮审查 2 项 P2 的回归断言
+    //   1) 加密文档（所有者密码 + 空用户口令）能打开，但导出必须被拒绝
+    //   2) 确认弹窗点击正文后，Esc 仍能关闭、Tab 仍在弹窗内循环
+    // 两条都属于「构建与其余断言全绿也照样坏」：前者回退后不报错、只是静默产出
+    // 坏文件，后者回退后表现为键盘在弹窗内失效。纯 Node 侧的守卫缺失对照见
+    // tests/geometry/pdf-encrypted-export.test.ts；本段两条也做过逐片段回退核对。
+    // ===================================================================
+    const cryptoContext = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const cryptoPage = await cryptoContext.newPage();
+    attachDiagnostics(cryptoPage);
+    await openApp(cryptoPage);
+
+    // ---- A15-1 加密文档能打开：PDF.js 对「空用户口令」不要求输入密码 ----
+    await openPdf(cryptoPage, "encrypted-owner-password.pdf", 2);
+    await waitForBannersToClear(cryptoPage);
+    const encryptedOpened = await cryptoPage.evaluate(() => {
+      const canvas = document.querySelector(".pdf-page canvas");
+      let opaque = 0;
+      let sampled = 0;
+      if (canvas && canvas.width > 1 && canvas.height > 1) {
+        const data = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
+        for (let y = 0; y < canvas.height; y += 4) {
+          for (let x = 0; x < canvas.width; x += 4) {
+            sampled += 1;
+            if (data[(y * canvas.width + x) * 4 + 3] > 0) opaque += 1;
+          }
+        }
+      }
+      const banners = [...document.querySelectorAll("[data-testid=banner]")].map((banner) =>
+        (banner.textContent ?? "").trim(),
+      );
+      return {
+        file: (document.querySelector("[data-testid=file-name]")?.textContent ?? "").trim(),
+        pages: document.querySelectorAll(".pdf-page").length,
+        backing: canvas ? `${canvas.width}x${canvas.height}` : "无画布",
+        defaultSized: canvas ? canvas.width === 300 && canvas.height === 150 : false,
+        opaqueRatio: sampled > 0 ? opaque / sampled : -1,
+        encryptedNotice: banners.some((text) => text.includes("已加密")),
+      };
+    });
+    check(
+      "A15-1 加密文档无需密码即可打开并渲染（所有者密码 + 空用户口令）",
+      encryptedOpened.file.includes("encrypted-owner-password.pdf") &&
+        encryptedOpened.pages === 2 &&
+        !encryptedOpened.defaultSized &&
+        encryptedOpened.opaqueRatio > 0.5 &&
+        !encryptedOpened.encryptedNotice,
+      `已打开 ${encryptedOpened.file}，页数 ${encryptedOpened.pages}，首页画布 ${encryptedOpened.backing}（默认尺寸=${encryptedOpened.defaultSized}），不透明像素占比 ${encryptedOpened.opaqueRatio.toFixed(2)}，出现「已加密」提示=${encryptedOpened.encryptedNotice}`,
+    );
+
+    // ---- A15-2 导出必须拒绝，且不能留下任何下载产物 ----
+    await createSignature(cryptoPage, "R");
+    await pickTemplate(cryptoPage, 0);
+    await placeOnPage(cryptoPage, 0, 0.42, 0.55);
+    await cryptoPage.waitForFunction(
+      () => document.querySelectorAll("[data-testid=placement]").length === 1,
+      null,
+      { timeout: 15000 },
+    );
+
+    const cryptoDownloads = [];
+    cryptoPage.on("download", (download) => cryptoDownloads.push(download.suggestedFilename()));
+    await cryptoPage.getByRole("button", { name: /下载签名后的 PDF|正在导出/ }).click();
+    const exportFailure = await cryptoPage
+      .locator("[data-testid=banner][data-tone=error]")
+      .filter({ hasText: "导出失败" })
+      .first()
+      .waitFor({ state: "visible", timeout: 20000 })
+      .then(() => true)
+      .catch(() => false);
+    // 断言文案语义而非整句常量：逐字绑定会让「改一个字就静默放过」变成「改一个字就红」，
+    // 而这里真正要守的是「拒绝」「加密」两件事都被告知。
+    const exportFailureText = exportFailure
+      ? (
+          await cryptoPage
+            .locator("[data-testid=banner][data-tone=error]")
+            .filter({ hasText: "导出失败" })
+            .first()
+            .innerText()
+        ).trim()
+      : "";
+    // 导出被拒后编辑不应被清空，也不该给用户留下一个「已导出」的成功提示。
+    const afterRefusedExport = {
+      items: (await itemBoxes(cryptoPage)).length,
+      successBanner: await cryptoPage
+        .locator("[data-testid=banner][data-tone=success]")
+        .filter({ hasText: "已导出" })
+        .count(),
+    };
+    await cryptoPage.waitForTimeout(600);
+    check(
+      "A15-2 加密文档导出被拒绝：提示已加密且未产生任何下载",
+      exportFailure &&
+        exportFailureText.includes("已加密") &&
+        exportFailureText.includes("暂不支持") &&
+        cryptoDownloads.length === 0 &&
+        afterRefusedExport.items === 1 &&
+        afterRefusedExport.successBanner === 0,
+      `错误提示="${exportFailureText.split("\n")[0]}"；下载事件 ${cryptoDownloads.length} 次${cryptoDownloads.length ? `（${JSON.stringify(cryptoDownloads)}）` : ""}；实例仍为 ${afterRefusedExport.items} 个；成功提示 ${afterRefusedExport.successBanner} 条。守卫缺失对照流程：此处会照常触发下载并生成一个内容未解密、读不回页面的坏文件`,
+    );
+
+    // ---- A16-1 / A16-2 点击弹窗正文后的键盘可用性 ----
+    // 有未导出的编辑时切换文档会先弹「放弃当前编辑」。点击正文（不可聚焦内容）曾让焦点
+    // 落到 document.body —— 弹窗面板不是可聚焦祖先，键盘事件不再经过组件，Esc 直接失效。
+    // A16-1 断言机制（焦点归属），A16-2 断言用户可感知的结果（Esc 关闭）。
+    // 摘掉 tabindex 的对照实测：activeElement=<BODY>、在弹窗内=false、Esc 后关闭=false、
+    // 且键盘事件不再进入组件；恢复后三条同时成立 —— 因此这两条都能区分新旧实现。
+    const focusDialog = cryptoPage.locator("[data-testid=confirm-dialog]");
+    await cryptoPage
+      .locator("[data-testid=toolbar] input[type=file]")
+      .setInputFiles(`${FIX}/sig-field-signed.pdf`);
+    await focusDialog.waitFor({ state: "visible", timeout: 10000 });
+    await cryptoPage.waitForTimeout(180);
+    const sessionBeforeBodyClick = (
+      await cryptoPage.locator("[data-testid=file-name]").innerText()
+    ).trim();
+    await focusDialog.locator("[data-testid=confirm-message]").click();
+    const focusAfterBodyClick = await cryptoPage.evaluate(() => {
+      const active = document.activeElement;
+      return {
+        tag: active?.tagName ?? null,
+        role: active?.getAttribute?.("role") ?? null,
+        isPanel: active === document.querySelector("[data-testid=confirm-dialog] [role=dialog]"),
+        inside: Boolean(active?.closest?.("[data-testid=confirm-dialog]")),
+        isBody: active === document.body,
+      };
+    });
+    check(
+      "A16-1 点击确认框正文后，焦点落到弹窗面板而不是 document.body",
+      focusAfterBodyClick.isPanel && !focusAfterBodyClick.isBody,
+      `点正文后 activeElement=<${focusAfterBodyClick.tag}> role=${focusAfterBodyClick.role}，是 dialog 面板=${focusAfterBodyClick.isPanel}，在弹窗内=${focusAfterBodyClick.inside}，是 body=${focusAfterBodyClick.isBody}。旧实现：焦点落到 body，键盘事件不再经过弹窗组件`,
+    );
+
+    await cryptoPage.keyboard.press("Escape");
+    const closedByEscape = await focusDialog
+      .waitFor({ state: "hidden", timeout: 3000 })
+      .then(() => true)
+      .catch(() => false);
+    const sessionAfterEscape = (
+      await cryptoPage.locator("[data-testid=file-name]").innerText()
+    ).trim();
+    check(
+      "A16-2 此后 Esc 仍能关闭弹窗，且不切换文档",
+      closedByEscape && sessionAfterEscape === sessionBeforeBodyClick,
+      `Esc 后关闭=${closedByEscape}（旧实现为 false），会话仍为 ${sessionAfterEscape}。Esc 是这次修复唯一被用户直接感知的效果`,
+    );
+
+    // ---- A16-3 反向对照：焦点落在面板上时，Shift+Tab 不得越出弹窗 ----
+    // 这条守的不是「原来的 bug」（旧实现里焦点在 body，浏览器把点击位置当起点，
+    // Shift+Tab 反而留在弹窗内），而是 tabindex 修复自身带来的副作用：
+    // 焦点落到面板后，面板既不是 first 也算 inside，只判断这两者就会走浏览器默认行为，
+    // 把焦点交给遮罩背后的工具栏。实测（探针 focus-probe.mjs）：
+    //   修复前：点击正文 → Shift+Tab → <BUTTON>「新建签名」在弹窗内=false
+    //   修复后：点击正文 → Shift+Tab → <BUTTON>「放弃并打开」在弹窗内=true
+    // 与 A14-7 同类：为「过度修复/修复副作用」设的反向断言。
+    await cryptoPage
+      .locator("[data-testid=toolbar] input[type=file]")
+      .setInputFiles(`${FIX}/sig-field-signed.pdf`);
+    await focusDialog.waitFor({ state: "visible", timeout: 10000 });
+    await cryptoPage.waitForTimeout(180);
+    await focusDialog.locator("[data-testid=confirm-message]").click();
+    // 循环顺序按运行时读到的按钮来判，不写死文案：这一段拿到的是「放弃当前编辑」弹窗
+    //（有未导出的编辑），它的确认按钮是「放弃并打开」，与数字签名弹窗不同名。
+    const dialogButtons = (
+      await focusDialog.locator("[data-testid=confirm-actions] .button").allInnerTexts()
+    ).map((label) => label.trim());
+    const tabWalk = [];
+    // 第一步必须从 dialog 面板自身执行 Shift+Tab，直接覆盖
+    // `active === panelRef.value` 分支；之后再验证正向与反向循环。
+    for (const key of ["Shift+Tab", "Tab", "Shift+Tab", "Shift+Tab"]) {
+      await cryptoPage.keyboard.press(key);
+      await cryptoPage.waitForTimeout(60);
+      tabWalk.push(
+        await cryptoPage.evaluate((pressed) => {
+          const active = document.activeElement;
+          return {
+            pressed,
+            tag: active?.tagName ?? null,
+            label: (active?.textContent ?? "").trim().slice(0, 12),
+            inside: Boolean(active?.closest?.("[data-testid=confirm-dialog]")),
+          };
+        }, key),
+      );
+    }
+    const tabWalkDetail = tabWalk
+      .map((step) => `${step.pressed}→<${step.tag}>「${step.label}」在弹窗内=${step.inside}`)
+      .join("；");
+    note(`点击正文后的逐步焦点：${tabWalkDetail}`);
+    const expectedCycle = [dialogButtons[1], dialogButtons[0], dialogButtons[1], dialogButtons[0]];
+    check(
+      "A16-3 点击正文后连续 Tab / Shift+Tab，焦点始终收在弹窗内",
+      dialogButtons.length === 2 &&
+        tabWalk.length === 4 &&
+        tabWalk.every((step) => step.inside && step.tag === "BUTTON") &&
+        tabWalk.every((step, index) => step.label === expectedCycle[index]),
+      `${tabWalkDetail}（弹窗按钮 ${JSON.stringify(dialogButtons)}）。修复副作用对照：加 tabindex 但不把面板自身视为「不在循环内」时，从面板出发的 Shift+Tab 会落到 <BUTTON>「新建签名」——即遮罩背后的工具栏`,
+    );
+
+    await handleConfirmDialog(cryptoPage, "取消", 1200);
+    await cryptoContext.close();
   } finally {
     await browser.close();
   }

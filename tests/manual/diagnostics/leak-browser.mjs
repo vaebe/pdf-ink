@@ -1,9 +1,10 @@
 // 任务 B：浏览器侧确认 PDF.js worker 泄漏。
 // 用 Node 22 + playwright-core + 指定 Chrome 运行，只读，不修改项目。
 
-import { chromium, launchOptions, APP, FIX } from "../../support/browser.mjs";
+import { chromium, launchOptions, APP, FIX, OUT_ROOT } from "../../support/browser.mjs";
 const BASE = APP;
-const TRIGGER = `${FIX}/trigger.pdf`;
+// trigger.pdf 由 leak-probe.mjs 按需生成，落在仓库外的产物目录里，不在夹具目录。
+const TRIGGER = `${OUT_ROOT}/trigger.pdf`;
 const PLAIN = `${FIX}/plain.pdf`;
 
 const workers = (page) => page.workers().length;

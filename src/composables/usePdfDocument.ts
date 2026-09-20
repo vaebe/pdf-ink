@@ -8,7 +8,7 @@ import {
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import PdfWorkerSource from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import type { DigitalSignatureInfo, DocumentSession, PageGeometry } from "../types/pdf";
-import { inspectDigitalSignatures } from "../lib/pdfExport";
+import { inspectDigitalSignatures, ENCRYPTED_PDF_MESSAGE } from "../lib/pdfExport";
 
 /**
  * worker 与主库版本一致，且由本地资源目录提供，不从未经确认的 CDN 加载。
@@ -28,7 +28,7 @@ export interface OpenFileOptions {
 
 function describeLoadError(error: unknown): string {
   if (error instanceof PasswordException || (error as Error | null)?.name === "PasswordException") {
-    return "该 PDF 已加密，需要密码才能打开，当前版本暂不支持加密文件。";
+    return ENCRYPTED_PDF_MESSAGE;
   }
   if (
     error instanceof InvalidPDFException ||

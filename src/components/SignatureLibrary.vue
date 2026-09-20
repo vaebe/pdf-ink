@@ -103,7 +103,7 @@ function useTemplate(id: string): void {
       >
         <button
           type="button"
-          class="flex cursor-pointer flex-col gap-1.5 text-left text-inherit"
+          class="flex cursor-pointer text-left text-inherit"
           data-testid="library-item-pick"
           title="使用签名"
           @click="useTemplate(template.id)"
@@ -117,7 +117,7 @@ function useTemplate(id: string): void {
           />
         </button>
 
-        <div class="flex items-center justify-end gap-1.5">
+        <div class="flex items-center justify-end">
           <button
             type="button"
             class="button button--ghost button--small"

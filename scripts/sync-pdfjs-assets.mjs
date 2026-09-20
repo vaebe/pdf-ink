@@ -9,13 +9,16 @@
 import { cp, mkdir, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const DIRECTORIES = ["cmaps", "standard_fonts", "wasm", "iccs"];
 
 const require = createRequire(import.meta.url);
 const pdfjsEntry = require.resolve("pdfjs-dist/package.json");
 const packageRoot = dirname(pdfjsEntry);
-const repoRoot = join(dirname(new URL(import.meta.url).pathname), "..");
+// 必须经 fileURLToPath：直接取 URL 的 pathname 在含空格、中文等需转义的路径下
+// 会拿到百分号编码（Windows 上还会多出 `/C:/` 前缀），导致 join 出来的目录不存在。
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const targetRoot = join(repoRoot, "public", "pdfjs");
 
 await rm(targetRoot, { recursive: true, force: true });

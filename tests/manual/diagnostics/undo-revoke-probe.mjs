@@ -96,7 +96,8 @@ async function placeAt(fracX, fracY) {
 }
 
 async function enterPlacing() {
-  const item = page.locator("[data-testid=library-item]", { hasText: "测试签名" });
+  // 签名名称输入已移除：条目里没有任何可匹配的名称文案，只能按位置取第一个条目。
+  const item = page.locator("[data-testid=library-item]").first();
   await item.locator("[data-testid=library-item-pick]").click();
   await sleep(250);
 }

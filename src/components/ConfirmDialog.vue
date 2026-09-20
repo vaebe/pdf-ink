@@ -55,7 +55,30 @@ function handleCancel(): void {
 }
 
 /**
+ * 点击标题、说明或详情等不可交互内容时，把焦点固定到 dialog 面板。
+ * 交互控件保留浏览器自己的焦点，避免点击按钮后把焦点从按钮移走。
+ */
+function focusPanelFromPointer(event: MouseEvent): void {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    return;
+  }
+  if (target.closest('button, a, input, select, textarea, [tabindex]:not([tabindex="-1"])')) {
+    return;
+  }
+  panelRef.value?.focus();
+}
+
+/**
  * Esc 取消；Tab 在弹窗内循环，避免焦点跑到被遮罩的背景内容上。
+ *
+ * 依赖面板上的 `tabindex="-1"`：点击标题、说明文字这类不可聚焦内容时，浏览器会把焦点
+ * 落到最近的**可聚焦祖先**——没有它就只能落到 `document.body`，键盘事件不再经过本组件，
+ * 于是点一下正文后 Esc 关不掉、Tab 也不再受控。
+ *
+ * 反过来，焦点落在面板**自身**时也要当成「在可循环元素之外」：面板既不是 `first`
+ * 也算 `inside`，若只判断这两者，从面板出发的 Shift+Tab 会走浏览器默认行为，
+ * 把焦点交给遮罩背后的工具栏（实测落到签名库的「新建签名」）。
  */
 function handleKeydown(event: KeyboardEvent): void {
   if (event.key === "Escape") {
@@ -75,10 +98,10 @@ function handleKeydown(event: KeyboardEvent): void {
   const last = items[items.length - 1];
   const active = document.activeElement;
   const inside = panelRef.value?.contains(active) ?? false;
-  if (event.shiftKey && (active === first || !inside)) {
+  if (event.shiftKey && (active === first || active === panelRef.value || !inside)) {
     event.preventDefault();
     last.focus();
-  } else if (!event.shiftKey && active === last) {
+  } else if (!event.shiftKey && (active === last || !inside)) {
     event.preventDefault();
     first.focus();
   }
@@ -117,6 +140,8 @@ onBeforeUnmount(() => {
       aria-modal="true"
       :aria-labelledby="titleId"
       :aria-describedby="messageId"
+      tabindex="-1"
+      @click="focusPanelFromPointer"
     >
       <div class="flex items-start gap-3">
         <span
