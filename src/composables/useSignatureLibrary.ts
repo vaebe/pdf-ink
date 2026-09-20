@@ -2,13 +2,11 @@ import { ref } from "vue";
 import type { SignatureTemplate } from "../types/signature";
 import {
   deleteSignatureTemplate,
-  getSignatureTemplate,
   listSignatureTemplates,
   putSignatureTemplate,
 } from "../lib/signatureStore";
 
 export interface NewSignatureTemplate {
-  name: string;
   blob: Blob;
   pixelWidth: number;
   pixelHeight: number;
@@ -23,10 +21,6 @@ function describeStoreError(error: unknown, fallback: string): string {
     return error.message;
   }
   return fallback;
-}
-
-function normalizeName(name: string): string {
-  return name.trim();
 }
 
 function createId(): string {
@@ -52,19 +46,12 @@ export function useSignatureLibrary() {
   }
 
   /**
-   * 保存一个新签名。只有写事务完成才返回 true，
+   * 保存一个新签名。只有写事务完成才返回结果，
    * 失败时调用方需要保留用户手写内容并提示错误。
    */
   async function saveTemplate(input: NewSignatureTemplate): Promise<SignatureTemplate | null> {
-    const name = normalizeName(input.name);
-    if (!name) {
-      libraryError.value = "签名名称不能为空。";
-      return null;
-    }
-
     const template: SignatureTemplate = {
       id: createId(),
-      name,
       blob: input.blob,
       pixelWidth: input.pixelWidth,
       pixelHeight: input.pixelHeight,
@@ -81,33 +68,6 @@ export function useSignatureLibrary() {
 
     templates.value = [...templates.value, template];
     return template;
-  }
-
-  /** 重命名签名模板。 */
-  async function renameTemplate(id: string, name: string): Promise<boolean> {
-    const nextName = normalizeName(name);
-    if (!nextName) {
-      libraryError.value = "签名名称不能为空。";
-      return false;
-    }
-
-    libraryError.value = null;
-    try {
-      const existing = await getSignatureTemplate(id);
-      if (!existing) {
-        libraryError.value = "该签名已不存在，请刷新签名库。";
-        return false;
-      }
-      const updated: SignatureTemplate = { ...existing, name: nextName };
-      await putSignatureTemplate(updated);
-      templates.value = templates.value.map((template) =>
-        template.id === id ? updated : template,
-      );
-      return true;
-    } catch (error) {
-      libraryError.value = describeStoreError(error, "重命名签名失败，请重试。");
-      return false;
-    }
   }
 
   /** 删除签名模板。当前文档中的实例与撤销记录不受影响。 */
@@ -140,7 +100,6 @@ export function useSignatureLibrary() {
     libraryError,
     loadLibrary,
     saveTemplate,
-    renameTemplate,
     removeTemplate,
     findTemplate,
     clearLibraryError,

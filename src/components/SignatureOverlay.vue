@@ -261,7 +261,7 @@ function handleResizePointerDown(event: PointerEvent, handle: (typeof HANDLES)[n
   });
 }
 
-/** 放置模式下，点击页面空白处添加一份实例，并保持模板选中以便重复放置。 */
+/** 放置模式下，点击页面空白处添加一份实例；放置一次后由编辑器退出放置模式。 */
 function handleBackgroundPointerDown(event: PointerEvent): void {
   if (!isPlacing.value) {
     return;

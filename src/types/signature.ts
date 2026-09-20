@@ -3,8 +3,6 @@
  */
 export interface SignatureTemplate {
   id: string;
-  /** 去除首尾空格后的名称，非空。名称不是主键。 */
-  name: string;
   /** 裁剪到笔迹边界后的透明背景 PNG。 */
   blob: Blob;
   pixelWidth: number;

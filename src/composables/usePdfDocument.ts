@@ -20,7 +20,7 @@ const resourceBase = `${import.meta.env.BASE_URL}pdfjs/`;
 
 /** 检测到数字签名的文档允许编辑，但必须提示用户其原数字签名会失效。 */
 const SIGNED_DOCUMENT_NOTICE =
-  "该 PDF 已检测到数字签名：继续编辑并导出会使原有数字签名失效。原始文件不会被修改，导出结果会另存为新文件。";
+  "该 PDF 包含数字签名：编辑并导出的新文件中，原有数字签名将失效。原始文件不会被修改，导出结果会另存为新文件。";
 
 /** 含未填写签名字段的文档：允许编辑，导出不改动该字段。 */
 const EMPTY_SIGNATURE_FIELD_NOTICE =

@@ -241,6 +241,8 @@ function placeAt(
   pushUndo(cloneSnapshot(placements.value));
   placements.value = [...placements.value, placement];
   selectedId.value = placement.id;
+  // 放置一次后退出放置模式，保持新实例选中；要再次放置需重新点击签名。
+  activeTemplateId.value = null;
   releaseUnusedAssets();
   return placement.id;
 }

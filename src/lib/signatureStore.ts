@@ -6,7 +6,6 @@ const STORE_NAME = "signatures";
 
 interface SignatureRecord {
   id: string;
-  name: string;
   blob: Blob;
   pixelWidth: number;
   pixelHeight: number;
@@ -51,9 +50,9 @@ function openDatabase(): Promise<IDBDatabase> {
 }
 
 function toTemplate(record: SignatureRecord): SignatureTemplate {
+  // 旧版本写入的记录可能带有多余的 name 字段，读取时直接忽略即可。
   return {
     id: record.id,
-    name: record.name,
     blob: record.blob,
     pixelWidth: record.pixelWidth,
     pixelHeight: record.pixelHeight,
@@ -116,21 +115,12 @@ export async function listSignatureTemplates(): Promise<SignatureTemplate[]> {
 export async function putSignatureTemplate(template: SignatureTemplate): Promise<void> {
   const record: SignatureRecord = {
     id: template.id,
-    name: template.name,
     blob: template.blob,
     pixelWidth: template.pixelWidth,
     pixelHeight: template.pixelHeight,
     createdAt: template.createdAt,
   };
   await runTransaction("readwrite", (store) => store.put(record));
-}
-
-/** 按编号读取签名模板，不存在时返回 null。 */
-export async function getSignatureTemplate(id: string): Promise<SignatureTemplate | null> {
-  const record = await runTransaction<SignatureRecord | undefined>("readonly", (store) =>
-    store.get(id),
-  );
-  return record ? toTemplate(record) : null;
 }
 
 /** 删除指定签名模板。 */

@@ -19,15 +19,13 @@ const CROP_PADDING = 12;
 const { saveTemplate, libraryError, clearLibraryError } = useSignatureLibrary();
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
-const nameInputRef = ref<HTMLInputElement | null>(null);
-const signerName = ref("");
 const formError = ref<string | null>(null);
 const isSaving = ref(false);
 const hasInk = ref(false);
 
 let pad: SignaturePad | null = null;
 
-const canSave = computed(() => signerName.value.trim().length > 0 && !isSaving.value);
+const canSave = computed(() => !isSaving.value);
 
 /**
  * 画布按设备像素比放大，并同步缩放上下文。
@@ -113,7 +111,6 @@ function detachLifecycle(): void {
 }
 
 function resetState(): void {
-  signerName.value = "";
   formError.value = null;
   hasInk.value = false;
   clearLibraryError();
@@ -130,7 +127,6 @@ watch(
         return;
       }
       createPad();
-      nameInputRef.value?.focus();
     } else {
       detachLifecycle();
       destroyPad();
@@ -215,11 +211,6 @@ async function handleSave(): Promise<void> {
   }
   formError.value = null;
 
-  if (!signerName.value.trim()) {
-    formError.value = "请先填写签名名称。";
-    return;
-  }
-
   const canvas = canvasRef.value;
   if (!pad || !canvas) {
     formError.value = "签名画布尚未就绪，请重新打开窗口。";
@@ -243,7 +234,6 @@ async function handleSave(): Promise<void> {
     }
 
     const template = await saveTemplate({
-      name: signerName.value,
       blob: cropped.blob,
       pixelWidth: cropped.width,
       pixelHeight: cropped.height,
@@ -282,20 +272,6 @@ onBeforeUnmount(() => {
         <h2>新建签名</h2>
         <button type="button" class="button button--ghost" @click="handleClose">关闭</button>
       </header>
-
-      <label class="flex flex-col gap-1.5">
-        <span class="text-meta text-ink-muted">签名名称</span>
-        <input
-          ref="nameInputRef"
-          v-model="signerName"
-          class="input"
-          data-testid="pad-name-input"
-          type="text"
-          maxlength="40"
-          placeholder="例如：我的签名"
-          @keydown.enter.prevent="handleSave"
-        />
-      </label>
 
       <div class="flex flex-col gap-1.5">
         <canvas
