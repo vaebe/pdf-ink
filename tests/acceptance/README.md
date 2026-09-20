@@ -20,8 +20,10 @@ pnpm exec playwright-core install chromium   # playwright-core 不打包浏览�
 Python 侧核对脚本需要 `pypdf` 与 `pypdfium2`（见 `python/requirements.txt`）：
 
 ```bash
-/Users/vae/.workbuddy/binaries/python/envs/default/bin/pip install -r tests/acceptance/python/requirements.txt
+python3 -m pip install -r tests/acceptance/python/requirements.txt
 ```
+
+若依赖装在 venv 或其他解释器下，跑套件时用 `PDFINK_PYTHON` 指到同一个解释器。
 
 跑起来（**两个终端**）：
 
@@ -43,6 +45,27 @@ pnpm test:acceptance
 | `PDFINK_PYTHON` | `python3`                | 跑 pypdf / PDFium 核对脚本的解释器；依赖装在 venv 里时必须显式指定                                                                     |
 | `CHROMIUM_PATH` | 空                       | 指定现成的 Chrome for Testing 可执行文件。留空则交给 Playwright 按自身修订号解析——本机 Playwright 期望的修订号与已缓存的不一致时需要它 |
 | `PDFINK_OUT`    | 系统临时目录             | 产物根目录，**默认在仓库之外**，见下节                                                                                                 |
+
+### 浏览器修订号对不上时怎么办
+
+套件只依赖 `playwright-core`（不打包浏览器）。启动失败时报的是这种错，它不是套件的问题：
+
+```
+browserType.launch: Executable doesn't exist at
+  ~/Library/Caches/ms-playwright/chromium_headless_shell-<A>/chrome-headless-shell-mac-arm64/chrome-headless-shell
+```
+
+`<A>` 是**当前 `playwright-core` 期望的修订号**，本机缓存里是另一个号（例如缓存有 `1234`、期望 `1243`）就会这样。
+两条路任选：
+
+```bash
+pnpm exec playwright-core install chromium   # 正规做法：补下载期望的修订号
+```
+
+```bash
+# 或者直接复用已缓存的同名二进制（版本接近时可用，省一次下载）
+export CHROMIUM_PATH="$HOME/Library/Caches/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-mac-arm64/chrome-headless-shell"
+```
 
 ## 产物落点：刻意放在仓库之外
 
