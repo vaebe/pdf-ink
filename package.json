@@ -9,6 +9,8 @@
     "preview": "vp preview",
     "sync:pdfjs": "node scripts/sync-pdfjs-assets.mjs",
     "verify:geometry": "node scripts/verify-pdf-geometry.mjs",
+    "test:acceptance": "node tests/acceptance/acceptance.mjs",
+    "fixtures:make": "node tests/acceptance/fixtures/make-fixtures.mjs && node tests/acceptance/fixtures/make-heavy-text.mjs && node tests/acceptance/fixtures/make-dot.mjs",
     "postinstall": "node scripts/sync-pdfjs-assets.mjs",
     "prepare": "vp config"
   },
@@ -23,6 +25,7 @@
     "@types/node": "^24.13.3",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/tsconfig": "^0.9.1",
+    "playwright-core": "1.63.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "catalog:",

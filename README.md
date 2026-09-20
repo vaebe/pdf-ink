@@ -45,7 +45,7 @@ pnpm verify:geometry
 | 缩放与「适合宽度」                                         | 支持                             |
 | 手写签名（鼠标／触控笔），高像素密度适配                   | 支持                             |
 | 签名裁剪到笔迹边界、透明背景 PNG                           | 支持                             |
-| 本地签名库：保存、重命名、删除、重复使用                   | 支持                             |
+| 本地签名库：保存、删除、重复使用                           | 支持                             |
 | 页面放置、拖动、等比缩放、删除、撤销／重做                 | 支持                             |
 | 导出为原文件名加 `-signed.pdf` 的新文件                    | 支持                             |
 | 保留原文件的页面旋转（0/90/180/270）、CropBox 与页面尺寸   | 支持                             |
@@ -130,7 +130,7 @@ scripts/
   中间滚动容器的可视区会把扩大出来的部分裁掉，余量可能实际为 0。这一条同时决定
   「离屏释放渲染资源」是否会把滚动变成白页。
   （缩略图那一侧是实测有效的个例，见 `docs/implementation-report.md` 6.8 节；调整前请用
-  `/private/tmp/pdf-ink-fixtures/thumb-margin-probe.mjs` 重新量一次，不要按结构类推。）
+  `tests/acceptance/probes/thumb-margin-probe.mjs` 重新量一次，不要按结构类推。）
 - **放置与拖动的边界约束走同一条路径。** 初次放置和后续拖动都调用 `clampMatrixToViewBox`。
   预览层不裁剪越界部分，导出却受页面可见区域限制；只在拖动时约束，就会出现
   「预览完整、导出缺一角」。
@@ -153,3 +153,6 @@ scripts/
 - 产品与实现方向：`docs/product-plan.md`
 - 执行方案与验收清单：`docs/implementation-plan.md`
 - 本次实现报告：`docs/implementation-report.md`
+- 代码审查标准与流程：`docs/code-review-guidelines.md`（提交前速查：`docs/code-review-checklist.md`）
+- 浏览器验收套件（脚本、探针、夹具，可复现）：`tests/acceptance/README.md`
+- 某次验收的结论留档（截图、导出样本、报告）：`docs/acceptance/README.md`
