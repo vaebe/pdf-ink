@@ -273,17 +273,12 @@ onBeforeUnmount(() => {
         <button type="button" class="button button--ghost" @click="handleClose">关闭</button>
       </header>
 
-      <div class="flex flex-col gap-1.5">
-        <canvas
-          ref="canvasRef"
-          class="hatch h-[200px] w-full cursor-crosshair touch-none rounded-lg border border-dashed border-line-strong"
-          aria-label="手写签名区域"
-          data-testid="signature-pad-canvas"
-        ></canvas>
-        <p class="text-micro text-ink-muted">
-          按住鼠标（或触控笔）在虚线框内书写，支持高像素密度屏幕。
-        </p>
-      </div>
+      <canvas
+        ref="canvasRef"
+        class="hatch h-[200px] w-full cursor-crosshair touch-none rounded-lg border border-dashed border-line-strong"
+        aria-label="手写签名区域"
+        data-testid="signature-pad-canvas"
+      ></canvas>
 
       <p v-if="formError" class="text-meta text-danger" role="alert" data-testid="pad-error">
         {{ formError }}
