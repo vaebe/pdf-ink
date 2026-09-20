@@ -25,20 +25,8 @@ interface PageLink {
 
 const { session } = usePdfDocument();
 
-const pageRef = ref<HTMLDivElement | null>(null);
-const canvasRef = ref<HTMLCanvasElement | null>(null);
-const textLayerRef = ref<HTMLDivElement | null>(null);
-
 const viewport = shallowRef<PageViewport | null>(null);
-const isVisible = ref(false);
 const links = ref<PageLink[]>([]);
-const renderError = ref<string | null>(null);
-
-let renderTask: RenderTask | null = null;
-let textLayerInstance: TextLayer | null = null;
-let renderToken = 0;
-let observer: IntersectionObserver | null = null;
-let linksLoaded = false;
 
 /**
  * 页面在屏幕上的尺寸。
@@ -72,10 +60,15 @@ const linkBoxes = computed(() => {
   });
 });
 
+let renderTask: RenderTask | null = null;
+
 function cancelRender(): void {
   renderTask?.cancel();
   renderTask = null;
 }
+
+const textLayerRef = ref<HTMLDivElement | null>(null);
+let textLayerInstance: TextLayer | null = null;
 
 function destroyTextLayer(): void {
   textLayerInstance?.cancel();
@@ -109,6 +102,8 @@ async function resolveTargetPage(dest: unknown): Promise<number | null> {
     return null;
   }
 }
+
+let linksLoaded = false;
 
 /** 读取链接注解，用于保留基础链接交互；只处理 PDF 链接注解。 */
 async function loadLinks(): Promise<void> {
@@ -150,6 +145,8 @@ async function loadLinks(): Promise<void> {
   }
 }
 
+let renderToken = 0;
+
 async function renderTextLayer(viewportForPage: PageViewport, token: number): Promise<void> {
   const container = textLayerRef.value;
   const currentSession = session.value;
@@ -187,6 +184,9 @@ async function renderTextLayer(viewportForPage: PageViewport, token: number): Pr
     destroyTextLayer();
   }
 }
+
+const canvasRef = ref<HTMLCanvasElement | null>(null);
+const renderError = ref<string | null>(null);
 
 async function renderPage(): Promise<void> {
   const token = ++renderToken;
@@ -252,6 +252,8 @@ async function renderPage(): Promise<void> {
   await loadLinks();
 }
 
+const isVisible = ref(false);
+
 function scheduleRender(): void {
   if (!isVisible.value) {
     return;
@@ -291,6 +293,9 @@ function followInternalLink(link: PageLink): void {
     emit("jump", link.targetPageIndex);
   }
 }
+
+const pageRef = ref<HTMLDivElement | null>(null);
+let observer: IntersectionObserver | null = null;
 
 onMounted(() => {
   const element = pageRef.value;

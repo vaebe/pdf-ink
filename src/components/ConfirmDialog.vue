@@ -30,10 +30,6 @@ const titleId = `${dialogId}-title`;
 const messageId = `${dialogId}-message`;
 
 const panelRef = ref<HTMLElement | null>(null);
-const cancelButtonRef = ref<HTMLButtonElement | null>(null);
-
-/** 弹窗打开前的焦点位置，关闭后归还。 */
-let previouslyFocused: HTMLElement | null = null;
 
 function focusableElements(): HTMLElement[] {
   const panel = panelRef.value;
@@ -87,6 +83,11 @@ function handleKeydown(event: KeyboardEvent): void {
     first.focus();
   }
 }
+
+const cancelButtonRef = ref<HTMLButtonElement | null>(null);
+
+/** 弹窗打开前的焦点位置，关闭后归还。 */
+let previouslyFocused: HTMLElement | null = null;
 
 onMounted(async () => {
   previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;

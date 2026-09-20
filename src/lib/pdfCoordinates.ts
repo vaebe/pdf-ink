@@ -261,9 +261,7 @@ export function clampMatrixToViewBox(
 ): Matrix6 {
   const bounds = matrixBounds(matrix);
   const pageWidth = viewBox[2] - viewBox[0];
-  const pageHeight = viewBox[3] - viewBox[1];
   let dx = 0;
-  let dy = 0;
 
   if (bounds.maxX - bounds.minX <= pageWidth) {
     if (bounds.minX < viewBox[0]) {
@@ -272,6 +270,9 @@ export function clampMatrixToViewBox(
       dx = viewBox[2] - bounds.maxX;
     }
   }
+
+  const pageHeight = viewBox[3] - viewBox[1];
+  let dy = 0;
   if (bounds.maxY - bounds.minY <= pageHeight) {
     if (bounds.minY < viewBox[1]) {
       dy = viewBox[1] - bounds.minY;

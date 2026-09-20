@@ -12,10 +12,6 @@ export interface NewSignatureTemplate {
   pixelHeight: number;
 }
 
-const templates = ref<SignatureTemplate[]>([]);
-const isLibraryLoading = ref(false);
-const libraryError = ref<string | null>(null);
-
 function describeStoreError(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message) {
     return error.message;
@@ -29,6 +25,10 @@ function createId(): string {
   }
   return `sig-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
+
+const templates = ref<SignatureTemplate[]>([]);
+const isLibraryLoading = ref(false);
+const libraryError = ref<string | null>(null);
 
 /** 签名库：本地持久化、保存状态与错误展示。 */
 export function useSignatureLibrary() {

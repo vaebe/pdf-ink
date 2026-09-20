@@ -1,9 +1,5 @@
 import type { SignatureTemplate } from "../types/signature";
 
-const DATABASE_NAME = "pdf-ink";
-const DATABASE_VERSION = 1;
-const STORE_NAME = "signatures";
-
 interface SignatureRecord {
   id: string;
   blob: Blob;
@@ -11,6 +7,10 @@ interface SignatureRecord {
   pixelHeight: number;
   createdAt: number;
 }
+
+const DATABASE_NAME = "pdf-ink";
+const DATABASE_VERSION = 1;
+const STORE_NAME = "signatures";
 
 let databasePromise: Promise<IDBDatabase> | null = null;
 
@@ -79,7 +79,6 @@ function runTransaction<T>(
           return;
         }
 
-        const holder: { value?: T } = {};
         let request: IDBRequest;
         try {
           request = run(transaction.objectStore(STORE_NAME));
@@ -89,6 +88,7 @@ function runTransaction<T>(
           return;
         }
 
+        const holder: { value?: T } = {};
         request.onsuccess = () => {
           holder.value = request.result as T;
         };

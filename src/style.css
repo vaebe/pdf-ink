@@ -212,3 +212,18 @@
     var(--surface) 20px
   );
 }
+
+/* 签名创作区始终保持浅色，避免深色主题影响落笔和文字预览的辨识度。 */
+@utility signature-creation-surface {
+  color-scheme: light;
+  color: #1f2430;
+  border-color: #c3c8d2;
+  background-color: #ffffff;
+  background-image: repeating-linear-gradient(
+    45deg,
+    #f7f8fa,
+    #f7f8fa 10px,
+    #ffffff 10px,
+    #ffffff 20px
+  );
+}

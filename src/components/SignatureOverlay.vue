@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, ref } from "vue";
 import type { PageViewport } from "pdfjs-dist";
 import type { Matrix6 } from "../types/pdf";
 import type { Point } from "../lib/pdfCoordinates";
@@ -18,18 +18,8 @@ const props = defineProps<{
   viewport: PageViewport | null;
 }>();
 
-/** 四个缩放手柄，锚点是它的对角。 */
-const HANDLES = [
-  { name: "topLeft", u: 0, v: 1, anchorU: 1, anchorV: 0, cursor: "nwse-resize" },
-  { name: "topRight", u: 1, v: 1, anchorU: 0, anchorV: 0, cursor: "nesw-resize" },
-  { name: "bottomLeft", u: 0, v: 0, anchorU: 1, anchorV: 1, cursor: "nesw-resize" },
-  { name: "bottomRight", u: 1, v: 0, anchorU: 0, anchorV: 1, cursor: "nwse-resize" },
-] as const;
-
 const {
   placementsForPage,
-  selectedId,
-  selectedPlacement,
   activeTemplateId,
   isPlacing,
   assetUrl,
@@ -42,8 +32,6 @@ const {
   endTransform,
   limits,
 } = useSignatureEditor();
-
-const overlayRef = ref<HTMLDivElement | null>(null);
 
 interface MoveGesture {
   kind: "move";
@@ -64,7 +52,8 @@ interface ResizeGesture {
   maxFactor: number;
 }
 
-let gesture: MoveGesture | ResizeGesture | null = null;
+const overlayRef = ref<HTMLDivElement | null>(null);
+const controlsPlacementId = ref<string | null>(null);
 
 /** 把指针事件换算为页面内容区坐标。 */
 function toLocalPoint(event: PointerEvent): Point {
@@ -100,9 +89,13 @@ const items = computed(() => {
   }));
 });
 
+const controlsPlacement = computed(
+  () => items.value.find((item) => item.id === controlsPlacementId.value)?.placement ?? null,
+);
+
 const selectedCorners = computed(() => {
   const viewport = props.viewport;
-  const placement = selectedPlacement.value;
+  const placement = controlsPlacement.value;
   if (!viewport || !placement || placement.pageIndex !== props.pageIndex) {
     return null;
   }
@@ -128,6 +121,14 @@ const selectionBox = computed(() => {
   return { left, top, right, bottom, width: right - left, height: bottom - top };
 });
 
+/** 四个缩放手柄，锚点是它的对角。 */
+const HANDLES = [
+  { name: "topLeft", u: 0, v: 1, anchorU: 1, anchorV: 0, cursor: "nwse-resize" },
+  { name: "topRight", u: 1, v: 1, anchorU: 0, anchorV: 0, cursor: "nesw-resize" },
+  { name: "bottomLeft", u: 0, v: 0, anchorU: 1, anchorV: 1, cursor: "nesw-resize" },
+  { name: "bottomRight", u: 1, v: 0, anchorU: 0, anchorV: 1, cursor: "nwse-resize" },
+] as const;
+
 const handlePositions = computed(() => {
   const corners = selectedCorners.value;
   if (!corners) {
@@ -151,6 +152,42 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+let gesture: MoveGesture | ResizeGesture | null = null;
+let hideControlsTimer: number | null = null;
+
+function cancelControlsHide(): void {
+  if (hideControlsTimer === null) {
+    return;
+  }
+  window.clearTimeout(hideControlsTimer);
+  hideControlsTimer = null;
+}
+
+function queueControlsHide(placementId: string): void {
+  cancelControlsHide();
+  hideControlsTimer = window.setTimeout(() => {
+    hideControlsTimer = null;
+    if (gesture) {
+      queueControlsHide(placementId);
+      return;
+    }
+    if (controlsPlacementId.value === placementId) {
+      controlsPlacementId.value = null;
+    }
+  }, 120);
+}
+
+function handleControlsPointerEnter(placementId: string): void {
+  cancelControlsHide();
+  controlsPlacementId.value = placementId;
+}
+
+function handleControlsPointerLeave(event: PointerEvent, placementId: string): void {
+  if (event.pointerType === "mouse") {
+    queueControlsHide(placementId);
+  }
+}
+
 function attachGestureListeners(target: HTMLElement, onMove: (event: PointerEvent) => void): void {
   const finish = () => {
     target.removeEventListener("pointermove", onMove);
@@ -171,6 +208,7 @@ function handleItemPointerDown(event: PointerEvent, placementId: string): void {
   }
   event.preventDefault();
   event.stopPropagation();
+  handleControlsPointerEnter(placementId);
   selectPlacement(placementId);
 
   const origin = items.value.find((item) => item.id === placementId)?.placement;
@@ -208,7 +246,7 @@ function handleResizePointerDown(event: PointerEvent, handle: (typeof HANDLES)[n
   event.preventDefault();
   event.stopPropagation();
 
-  const placement = selectedPlacement.value;
+  const placement = controlsPlacement.value;
   const viewport = props.viewport;
   const target = event.currentTarget;
   if (!placement || !viewport || !(target instanceof HTMLElement)) {
@@ -277,6 +315,20 @@ function handleBackgroundPointerDown(event: PointerEvent): void {
   event.preventDefault();
   placeAt(props.pageIndex, viewport, toLocalPoint(event), templateId);
 }
+
+function handleRemovePlacement(): void {
+  const placementId = controlsPlacementId.value;
+  if (!placementId) {
+    return;
+  }
+  removePlacement(placementId);
+  controlsPlacementId.value = null;
+  cancelControlsHide();
+}
+
+onBeforeUnmount(() => {
+  cancelControlsHide();
+});
 </script>
 
 <template>
@@ -298,18 +350,20 @@ function handleBackgroundPointerDown(event: PointerEvent): void {
         height: `${item.dom.height}px`,
         transform: item.dom.transform,
       }"
+      @pointerenter="handleControlsPointerEnter(item.id)"
+      @pointerleave="handleControlsPointerLeave($event, item.id)"
       @pointerdown="handleItemPointerDown($event, item.id)"
     >
       <img
         class="block size-full select-none [-webkit-user-drag:none]"
-        :class="selectedId === item.id ? 'outline-1 outline-accent' : ''"
+        :class="controlsPlacementId === item.id ? 'outline-1 outline-accent' : ''"
         :src="item.url"
         alt="已放置的签名"
         draggable="false"
       />
     </div>
 
-    <template v-if="selectionBox">
+    <template v-if="selectionBox && controlsPlacementId">
       <div
         class="pointer-events-none absolute border border-dashed border-accent"
         data-testid="placement-frame"
@@ -329,8 +383,10 @@ function handleBackgroundPointerDown(event: PointerEvent): void {
           left: `${selectionBox.left + selectionBox.width / 2}px`,
           top: `${Math.max(selectionBox.top - 30, 2)}px`,
         }"
+        @pointerenter="cancelControlsHide"
+        @pointerleave="handleControlsPointerLeave($event, controlsPlacementId)"
         @pointerdown="blockPointer"
-        @click.stop="selectedId && removePlacement(selectedId)"
+        @click.stop="handleRemovePlacement"
       >
         删除签名
       </button>
@@ -345,6 +401,8 @@ function handleBackgroundPointerDown(event: PointerEvent): void {
           top: `${handle.point.y}px`,
           cursor: handle.cursor,
         }"
+        @pointerenter="cancelControlsHide"
+        @pointerleave="handleControlsPointerLeave($event, controlsPlacementId)"
         @pointerdown="handleResizePointerDown($event, handle)"
       ></span>
     </template>

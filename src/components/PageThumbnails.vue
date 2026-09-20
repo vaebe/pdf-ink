@@ -13,12 +13,12 @@ const emit = defineEmits<{
   select: [pageIndex: number];
 }>();
 
-/** 缩略图宽度上限，实际宽度按页面比例缩放。 */
-const THUMBNAIL_WIDTH = 108;
-
 const { session, documentId } = usePdfDocument();
 
 const pages = computed(() => session.value?.pages ?? []);
+
+/** 缩略图宽度上限，实际宽度按页面比例缩放。 */
+const THUMBNAIL_WIDTH = 108;
 
 /** 所有缩略图共用同一个缩放比例，页面之间的尺寸关系保持可辨认。 */
 const thumbnailScale = computed(() => {
@@ -32,12 +32,7 @@ const thumbnailScale = computed(() => {
   return widest > 0 ? THUMBNAIL_WIDTH / widest : 0;
 });
 
-const itemRefs = new Map<number, HTMLLIElement>();
-const canvasRefs = new Map<number, HTMLCanvasElement>();
 const renderTasks = new Map<number, RenderTask>();
-const renderedKeys = new Set<string>();
-
-let observer: IntersectionObserver | null = null;
 
 function cancelThumbnail(pageIndex: number): void {
   const task = renderTasks.get(pageIndex);
@@ -52,6 +47,9 @@ function cancelAll(): void {
     cancelThumbnail(pageIndex);
   }
 }
+
+const canvasRefs = new Map<number, HTMLCanvasElement>();
+const renderedKeys = new Set<string>();
 
 async function renderThumbnail(pageIndex: number): Promise<void> {
   const currentSession = session.value;
@@ -119,6 +117,9 @@ function handleIntersect(entries: IntersectionObserverEntry[]): void {
     }
   }
 }
+
+const itemRefs = new Map<number, HTMLLIElement>();
+let observer: IntersectionObserver | null = null;
 
 function setItemRef(pageIndex: number, element: Element | ComponentPublicInstance | null): void {
   const previous = itemRefs.get(pageIndex);

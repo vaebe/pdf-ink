@@ -14,7 +14,6 @@ const { activeTemplateId, isPlacing, beginPlacement } = useSignatureEditor();
 const { requestConfirm } = useConfirmDialog();
 
 const previewUrls = ref(new Map<string, string>());
-const busyId = ref<string | null>(null);
 
 function syncPreviewUrls(): void {
   const next = new Map<string, string>();
@@ -43,6 +42,8 @@ onBeforeUnmount(() => {
 function previewUrl(id: string): string | undefined {
   return previewUrls.value.get(id);
 }
+
+const busyId = ref<string | null>(null);
 
 async function confirmRemove(id: string): Promise<void> {
   const confirmed = await requestConfirm({

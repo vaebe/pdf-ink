@@ -27,7 +27,6 @@ const emit = defineEmits<{
   cancelPlacement: [];
 }>();
 
-const fileInputRef = ref<HTMLInputElement | null>(null);
 const pageInput = ref("1");
 
 watch(
@@ -61,6 +60,8 @@ function commitPage(): void {
 function toggleFitWidth(): void {
   emit("update:fitWidth", !props.fitWidth);
 }
+
+const fileInputRef = ref<HTMLInputElement | null>(null);
 </script>
 
 <template>

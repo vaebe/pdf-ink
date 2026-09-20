@@ -13,36 +13,11 @@ import {
 import { usePdfDocument } from "./usePdfDocument";
 import { useSignatureLibrary } from "./useSignatureLibrary";
 
-/** 放置时使用的长边占页面可视宽度的比例，以及绝对上限（PDF 用户空间单位）。 */
-const PLACEMENT_WIDTH_RATIO = 0.3;
-const PLACEMENT_WIDTH_LIMIT = 200;
-const PLACEMENT_MIN_EXTENT = 6;
-const PLACEMENT_MAX_EXTENT = 600;
-
 interface AssetEntry {
   url: string;
   pixelWidth: number;
   pixelHeight: number;
 }
-
-const placements = ref<SignaturePlacement[]>([]);
-const selectedId = ref<string | null>(null);
-const activeTemplateId = ref<string | null>(null);
-const undoStack = ref<SignaturePlacement[][]>([]);
-const redoStack = ref<SignaturePlacement[][]>([]);
-
-/** assetId 对应的对象 URL，用于预览；会话结束或不再被引用时释放。 */
-const assetEntries = reactive(new Map<string, AssetEntry>());
-/** 模板在本会话中已经创建的图片，避免重复创建同一份数据。 */
-const templateAssetIds = new Map<string, string>();
-
-// 编辑器状态是模块级单例；文档会话与签名库同样是模块级共享状态，
-// 在模块作用域获取一次，供下方所有共享函数使用。
-const { session } = usePdfDocument();
-const { findTemplate } = useSignatureLibrary();
-
-let gestureSnapshot: SignaturePlacement[] | null = null;
-let gestureDirty = false;
 
 function createId(prefix: string): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -66,6 +41,25 @@ function sameMatrix(left: Matrix6, right: Matrix6): boolean {
     left[5] === right[5]
   );
 }
+
+const placements = ref<SignaturePlacement[]>([]);
+const selectedId = ref<string | null>(null);
+const activeTemplateId = ref<string | null>(null);
+const undoStack = ref<SignaturePlacement[][]>([]);
+const redoStack = ref<SignaturePlacement[][]>([]);
+
+/** assetId 对应的对象 URL，用于预览；会话结束或不再被引用时释放。 */
+const assetEntries = reactive(new Map<string, AssetEntry>());
+/** 模板在本会话中已经创建的图片，避免重复创建同一份数据。 */
+const templateAssetIds = new Map<string, string>();
+
+// 编辑器状态是模块级单例；文档会话与签名库同样是模块级共享状态，
+// 在模块作用域获取一次，供下方所有共享函数使用。
+const { session } = usePdfDocument();
+const { findTemplate } = useSignatureLibrary();
+
+let gestureSnapshot: SignaturePlacement[] | null = null;
+let gestureDirty = false;
 
 /** 会话切换时清空编辑状态，并释放上一份会话的图片资源。 */
 function resetEditorState(): void {
@@ -134,15 +128,6 @@ const placementsByPage = computed(() => {
   return grouped;
 });
 
-const isPlacing = computed(
-  () => activeTemplateId.value !== null && findTemplate(activeTemplateId.value) !== null,
-);
-const canUndo = computed(() => undoStack.value.length > 0);
-const canRedo = computed(() => redoStack.value.length > 0);
-const selectedPlacement = computed(
-  () => placements.value.find((placement) => placement.id === selectedId.value) ?? null,
-);
-
 function placementsForPage(pageIndex: number): SignaturePlacement[] {
   return placementsByPage.value.get(pageIndex) ?? [];
 }
@@ -195,6 +180,10 @@ function ensureAsset(template: SignatureTemplate): string {
   templateAssetIds.set(template.id, assetId);
   return assetId;
 }
+
+/** 放置时使用的长边占页面可视宽度的比例，以及绝对上限（PDF 用户空间单位）。 */
+const PLACEMENT_WIDTH_RATIO = 0.3;
+const PLACEMENT_WIDTH_LIMIT = 200;
 
 /** 在当前页面放置一份实例，返回新实例编号。 */
 function placeAt(
@@ -343,6 +332,10 @@ function isEditableTarget(target: EventTarget | null): boolean {
   return tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT";
 }
 
+const isPlacing = computed(
+  () => activeTemplateId.value !== null && findTemplate(activeTemplateId.value) !== null,
+);
+
 /**
  * 键盘快捷键入口。文本框获得焦点时，删除与撤销不作用于页面签名。
  */
@@ -408,6 +401,15 @@ export function disposeSignatureEditor(): void {
   resetScope?.stop();
   resetScope = null;
 }
+
+const PLACEMENT_MIN_EXTENT = 6;
+const PLACEMENT_MAX_EXTENT = 600;
+
+const canUndo = computed(() => undoStack.value.length > 0);
+const canRedo = computed(() => redoStack.value.length > 0);
+const selectedPlacement = computed(
+  () => placements.value.find((placement) => placement.id === selectedId.value) ?? null,
+);
 
 /**
  * 页面签名实例的选择、放置、调整与撤销重做。

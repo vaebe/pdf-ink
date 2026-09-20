@@ -14,13 +14,8 @@ const emit = defineEmits<{
   "update:effectiveScale": [scale: number];
 }>();
 
-/** 页面两侧的留白，参与「自适应宽度」的计算。 */
-const VIEWER_PADDING = 32;
-
 const { session, documentId } = usePdfDocument();
 
-const scrollerRef = ref<HTMLDivElement | null>(null);
-const scrollerWidth = ref(0);
 const effectiveScale = ref(props.zoom);
 
 const pages = computed(() => session.value?.pages ?? []);
@@ -35,6 +30,11 @@ const referenceBaseWidth = computed(() => {
   const height = (first.viewBox[3] - first.viewBox[1]) * first.userUnit;
   return first.rotation % 180 === 0 ? width : height;
 });
+
+/** 页面两侧的留白，参与「自适应宽度」的计算。 */
+const VIEWER_PADDING = 32;
+
+const scrollerWidth = ref(0);
 
 function computeEffectiveScale(): number {
   if (props.fitWidth && referenceBaseWidth.value > 0 && scrollerWidth.value > 0) {
@@ -51,6 +51,8 @@ function syncEffectiveScale(): void {
   }
 }
 
+const scrollerRef = ref<HTMLDivElement | null>(null);
+
 function scrollToPage(pageIndex: number): void {
   const scroller = scrollerRef.value;
   if (!scroller) {
@@ -63,7 +65,6 @@ function scrollToPage(pageIndex: number): void {
   scroller.scrollTo({ top: Math.max(target.offsetTop - 12, 0), behavior: "auto" });
 }
 
-let frameHandle = 0;
 /** 视图内部记录的当前页，用于区分“用户滚动”与“外部指定页码”。 */
 let reportedPage = 0;
 
@@ -93,6 +94,8 @@ function detectCurrentPage(): void {
     emit("update:currentPage", bestIndex);
   }
 }
+
+let frameHandle = 0;
 
 function handleScroll(): void {
   if (frameHandle) {

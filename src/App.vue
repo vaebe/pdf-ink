@@ -18,14 +18,6 @@ import PageThumbnails from "./components/PageThumbnails.vue";
 import SignatureLibrary from "./components/SignatureLibrary.vue";
 import SignaturePadDialog from "./components/SignaturePadDialog.vue";
 
-const ZOOM_STEPS = [0.4, 0.5, 0.67, 0.8, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4] as const;
-
-/**
- * 固定缩放的默认倍率：关闭「自适应宽度」时用它作为初始与换文档后的倍率。
- * 三个使用点（zoom / effectiveScale 的初值、新会话重置）共用它，避免数值漂移。
- */
-const DEFAULT_SCALE = 1.25;
-
 const {
   session,
   documentId,
@@ -44,25 +36,6 @@ const { dialog: confirmDialog, isConfirmOpen, requestConfirm, settleConfirm } = 
 // 共享编辑器的会话重置监听由本入口（应用级）安装与回收；
 // 页面组件只通过 useSignatureEditor 读取状态，不决定编辑器生命周期。
 initSignatureEditor();
-
-const currentPage = ref(0);
-const zoom = ref(DEFAULT_SCALE);
-// 默认使用固定缩放：不自动切到「自适应宽度」，打开文档时也保持关闭。
-const fitWidth = ref(false);
-const effectiveScale = ref(DEFAULT_SCALE);
-const emptyStateInputRef = ref<HTMLInputElement | null>(null);
-const isPadOpen = ref(false);
-const isExporting = ref(false);
-const exportError = ref<string | null>(null);
-const statusMessage = ref<string | null>(null);
-
-let statusTimer = 0;
-
-const fileName = computed(() => session.value?.fileName ?? null);
-const canExport = computed(() => session.value !== null && placements.value.length > 0);
-
-/** 最近一次成功导出时使用的实例快照；与当前实例不一致即视为有未导出的修改。 */
-const exportBaseline = ref<SignaturePlacement[]>([]);
 
 function sameMatrix(left: Matrix6, right: Matrix6): boolean {
   return (
@@ -101,7 +74,21 @@ function samePlacements(
   return true;
 }
 
+/** 最近一次成功导出时使用的实例快照；与当前实例不一致即视为有未导出的修改。 */
+const exportBaseline = ref<SignaturePlacement[]>([]);
+
 const hasUnsavedEdits = computed(() => !samePlacements(placements.value, exportBaseline.value));
+
+/**
+ * 固定缩放的默认倍率：关闭「自适应宽度」时用它作为初始与换文档后的倍率。
+ * 三个使用点（zoom / effectiveScale 的初值、新会话重置）共用它，避免数值漂移。
+ */
+const DEFAULT_SCALE = 1.25;
+
+const currentPage = ref(0);
+const zoom = ref(DEFAULT_SCALE);
+// 默认使用固定缩放：不自动切到「自适应宽度」，打开文档时也保持关闭。
+const fitWidth = ref(false);
 
 // documentId 只在会话真正切换成功时递增，是现成的「新会话建立」信号：
 // 阅读状态与导出基准都在这里重置，取消确认、读取失败或过期请求不会走到这里，
@@ -115,6 +102,9 @@ watch(documentId, () => {
   // 新会话的实例列表已由编辑器重置为空，导出基准同样从空列表开始。
   exportBaseline.value = [];
 });
+
+const statusMessage = ref<string | null>(null);
+let statusTimer = 0;
 
 function flashStatus(message: string): void {
   statusMessage.value = message;
@@ -158,6 +148,8 @@ function confirmDiscardEdits(): Promise<boolean> {
   });
 }
 
+const exportError = ref<string | null>(null);
+
 async function handleOpenFile(file: File): Promise<void> {
   const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
   if (!isPdf) {
@@ -185,6 +177,9 @@ function handleEmptyStateFileChange(event: Event): void {
   }
 }
 
+const effectiveScale = ref(DEFAULT_SCALE);
+const ZOOM_STEPS = [0.4, 0.5, 0.67, 0.8, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4] as const;
+
 function stepZoom(direction: 1 | -1): void {
   fitWidth.value = false;
   const current = effectiveScale.value;
@@ -202,6 +197,8 @@ function buildOutputFileName(source: string): string {
   const base = source.replace(/\.pdf$/i, "");
   return `${base}-signed.pdf`;
 }
+
+const isExporting = ref(false);
 
 async function handleExport(): Promise<void> {
   const currentSession = session.value;
@@ -248,6 +245,8 @@ async function handleExport(): Promise<void> {
   }
 }
 
+const isPadOpen = ref(false);
+
 function handlePadSaved(): void {
   isPadOpen.value = false;
   flashStatus("签名已保存到本地签名库");
@@ -276,6 +275,11 @@ onBeforeUnmount(() => {
   disposeSignatureEditor();
   releaseAllAssetUrls();
 });
+
+const fileName = computed(() => session.value?.fileName ?? null);
+const canExport = computed(() => session.value !== null && placements.value.length > 0);
+
+const emptyStateInputRef = ref<HTMLInputElement | null>(null);
 </script>
 
 <template>

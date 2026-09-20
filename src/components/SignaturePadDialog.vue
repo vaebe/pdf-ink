@@ -4,6 +4,16 @@ import SignaturePad from "signature_pad";
 import type { SignatureTemplate } from "../types/signature";
 import { useSignatureLibrary } from "../composables/useSignatureLibrary";
 
+type SignatureMode = "handwriting" | "text";
+type StrokeWidth = "thin" | "medium" | "thick";
+
+interface StrokeWidthOption {
+  value: StrokeWidth;
+  label: string;
+  minWidth: number;
+  maxWidth: number;
+}
+
 const props = defineProps<{
   open: boolean;
 }>();
@@ -13,19 +23,9 @@ const emit = defineEmits<{
   saved: [template: SignatureTemplate];
 }>();
 
-/** 裁剪时在笔迹四周保留的空白，单位是画布像素。 */
-const CROP_PADDING = 12;
-
 const { saveTemplate, libraryError, clearLibraryError } = useSignatureLibrary();
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
-const formError = ref<string | null>(null);
-const isSaving = ref(false);
-const hasInk = ref(false);
-
-let pad: SignaturePad | null = null;
-
-const canSave = computed(() => !isSaving.value);
 
 /**
  * 画布按设备像素比放大，并同步缩放上下文。
@@ -55,6 +55,8 @@ function syncCanvasResolution(): void {
   }
 }
 
+let pad: SignaturePad | null = null;
+
 function resizeKeepingInk(): void {
   if (!pad) {
     return;
@@ -67,6 +69,24 @@ function resizeKeepingInk(): void {
   }
 }
 
+const DEFAULT_PEN_COLOR = "#101828";
+const penColor = ref(DEFAULT_PEN_COLOR);
+const strokeWidth = ref<StrokeWidth>("medium");
+
+const STROKE_WIDTH_OPTIONS: readonly StrokeWidthOption[] = [
+  { value: "thin", label: "细", minWidth: 0.6, maxWidth: 2.2 },
+  { value: "medium", label: "中", minWidth: 1, maxWidth: 3.6 },
+  { value: "thick", label: "粗", minWidth: 1.8, maxWidth: 5.4 },
+];
+
+const selectedStrokeWidth = computed(
+  () =>
+    STROKE_WIDTH_OPTIONS.find((option) => option.value === strokeWidth.value) ??
+    STROKE_WIDTH_OPTIONS[1],
+);
+
+const hasInk = ref(false);
+
 function createPad(): void {
   const canvas = canvasRef.value;
   if (!canvas) {
@@ -74,9 +94,9 @@ function createPad(): void {
   }
   syncCanvasResolution();
   pad = new SignaturePad(canvas, {
-    minWidth: 1,
-    maxWidth: 3.6,
-    penColor: "#101828",
+    minWidth: selectedStrokeWidth.value.minWidth,
+    maxWidth: selectedStrokeWidth.value.maxWidth,
+    penColor: penColor.value,
     backgroundColor: "rgba(0,0,0,0)",
   });
   pad.addEventListener("endStroke", () => {
@@ -110,11 +130,33 @@ function detachLifecycle(): void {
   window.removeEventListener("keydown", handleWindowKeydown);
 }
 
+const formError = ref<string | null>(null);
+const mode = ref<SignatureMode>("handwriting");
+const typedText = ref("");
+
 function resetState(): void {
   formError.value = null;
   hasInk.value = false;
+  mode.value = "handwriting";
+  penColor.value = DEFAULT_PEN_COLOR;
+  strokeWidth.value = "medium";
+  typedText.value = "";
   clearLibraryError();
 }
+
+watch(penColor, (color) => {
+  if (pad) {
+    pad.penColor = color;
+  }
+});
+
+watch(selectedStrokeWidth, (width) => {
+  if (!pad) {
+    return;
+  }
+  pad.minWidth = width.minWidth;
+  pad.maxWidth = width.maxWidth;
+});
 
 watch(
   () => props.open,
@@ -133,6 +175,9 @@ watch(
     }
   },
 );
+
+/** 裁剪时在笔迹四周保留的空白，单位是画布像素。 */
+const CROP_PADDING = 12;
 
 /**
  * 把画布裁剪到笔迹边界，输出透明背景 PNG。
@@ -193,9 +238,58 @@ async function cropToInk(
 }
 
 function handleClear(): void {
+  if (mode.value === "handwriting") {
+    pad?.clear();
+    hasInk.value = false;
+  } else {
+    typedText.value = "";
+  }
+  formError.value = null;
+}
+
+const isSaving = ref(false);
+
+async function handleModeChange(nextMode: SignatureMode): Promise<void> {
+  if (mode.value === nextMode || isSaving.value) {
+    return;
+  }
   pad?.clear();
   hasInk.value = false;
+  typedText.value = "";
   formError.value = null;
+  mode.value = nextMode;
+
+  if (nextMode === "handwriting") {
+    await nextTick();
+    syncCanvasResolution();
+  }
+}
+
+/** 文字签名使用固定字号和字重，保持预览与保存结果一致。 */
+const TEXT_FONT = '500 64px system-ui, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif';
+
+/** 把单行文字绘制到透明画布，之后沿用手写签名的裁剪和保存流程。 */
+function renderTypedText(text: string): HTMLCanvasElement | null {
+  const measureCanvas = document.createElement("canvas");
+  const measureContext = measureCanvas.getContext("2d");
+  if (!measureContext) {
+    return null;
+  }
+  measureContext.font = TEXT_FONT;
+  const metrics = measureContext.measureText(text);
+
+  const output = document.createElement("canvas");
+  output.width = Math.max(1, Math.ceil(metrics.width + CROP_PADDING * 2));
+  output.height = 96;
+  const context = output.getContext("2d");
+  if (!context) {
+    return null;
+  }
+  context.font = TEXT_FONT;
+  context.fillStyle = penColor.value;
+  context.textBaseline = "middle";
+  context.fillText(text, CROP_PADDING, output.height / 2);
+  return output;
 }
 
 function handleClose(): void {
@@ -211,14 +305,29 @@ async function handleSave(): Promise<void> {
   }
   formError.value = null;
 
-  const canvas = canvasRef.value;
-  if (!pad || !canvas) {
-    formError.value = "签名画布尚未就绪，请重新打开窗口。";
-    return;
-  }
-  if (pad.isEmpty()) {
-    formError.value = "画布还是空白的，请先手写签名。";
-    return;
+  let source: HTMLCanvasElement | null = null;
+  if (mode.value === "handwriting") {
+    const canvas = canvasRef.value;
+    if (!pad || !canvas) {
+      formError.value = "签名画布尚未就绪，请重新打开窗口。";
+      return;
+    }
+    if (pad.isEmpty()) {
+      formError.value = "画布还是空白的，请先手写签名。";
+      return;
+    }
+    source = canvas;
+  } else {
+    const text = typedText.value.trim();
+    if (!text) {
+      formError.value = "请输入签名文字。";
+      return;
+    }
+    source = renderTypedText(text);
+    if (!source) {
+      formError.value = "无法生成文字签名，请重试。";
+      return;
+    }
   }
 
   // 保存闸门必须在进入第一个异步操作之前合上。cropToInk 里的 toBlob 是异步的，
@@ -227,9 +336,12 @@ async function handleSave(): Promise<void> {
   // 于是出现「窗口已经关掉、签名却还是存进去了」。裁剪与存储一起纳入 try/finally。
   isSaving.value = true;
   try {
-    const cropped = await cropToInk(canvas);
+    const cropped = await cropToInk(source);
     if (!cropped) {
-      formError.value = "没有检测到笔迹，请重新手写签名。";
+      formError.value =
+        mode.value === "handwriting"
+          ? "没有检测到笔迹，请重新手写签名。"
+          : "无法生成文字签名，请修改后重试。";
       return;
     }
 
@@ -253,6 +365,17 @@ onBeforeUnmount(() => {
   detachLifecycle();
   destroyPad();
 });
+
+const COLOR_OPTIONS = [
+  { value: "#101828", label: "黑色" },
+  { value: "#175cd3", label: "蓝色" },
+  { value: "#d92d20", label: "红色" },
+] as const;
+
+const canSave = computed(() => !isSaving.value);
+const hasContent = computed(() =>
+  mode.value === "handwriting" ? hasInk.value : typedText.value.trim().length > 0,
+);
 </script>
 
 <template>
@@ -273,20 +396,121 @@ onBeforeUnmount(() => {
         <button type="button" class="button button--ghost" @click="handleClose">关闭</button>
       </header>
 
-      <canvas
-        ref="canvasRef"
-        class="hatch h-[200px] w-full cursor-crosshair touch-none rounded-lg border border-dashed border-line-strong"
-        aria-label="手写签名区域"
-        data-testid="signature-pad-canvas"
-      ></canvas>
+      <div class="flex gap-2" role="group" aria-label="签名输入方式">
+        <button
+          type="button"
+          class="button button--ghost flex-1"
+          :class="{ 'button--toggled': mode === 'handwriting' }"
+          :aria-pressed="mode === 'handwriting'"
+          @click="handleModeChange('handwriting')"
+        >
+          手写
+        </button>
+        <button
+          type="button"
+          class="button button--ghost flex-1"
+          :class="{ 'button--toggled': mode === 'text' }"
+          :aria-pressed="mode === 'text'"
+          @click="handleModeChange('text')"
+        >
+          文字
+        </button>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="text-meta text-ink-muted">颜色</span>
+        <div class="flex items-center gap-2" role="group" aria-label="签名颜色">
+          <button
+            v-for="option in COLOR_OPTIONS"
+            :key="option.value"
+            type="button"
+            class="size-7 rounded-full border-2 transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            :class="penColor === option.value ? 'border-accent' : 'border-line-strong'"
+            :style="{ backgroundColor: option.value }"
+            :aria-label="option.label"
+            :aria-pressed="penColor === option.value"
+            @click="penColor = option.value"
+          ></button>
+          <label class="flex items-center gap-1.5 text-meta text-ink-muted">
+            自定义
+            <input
+              v-model="penColor"
+              type="color"
+              class="h-7 w-9 cursor-pointer rounded border border-line bg-surface p-0.5"
+              aria-label="自定义签名颜色"
+            />
+          </label>
+        </div>
+
+        <template v-if="mode === 'handwriting'">
+          <span class="ml-auto text-meta text-ink-muted">粗细</span>
+          <div class="flex gap-1" role="group" aria-label="笔迹粗细">
+            <button
+              v-for="option in STROKE_WIDTH_OPTIONS"
+              :key="option.value"
+              type="button"
+              class="button button--ghost button--small"
+              :class="{ 'button--toggled': strokeWidth === option.value }"
+              :aria-pressed="strokeWidth === option.value"
+              @click="strokeWidth = option.value"
+            >
+              {{ option.label }}
+            </button>
+          </div>
+        </template>
+      </div>
+
+      <div v-show="mode === 'handwriting'" class="flex flex-col gap-1.5">
+        <canvas
+          ref="canvasRef"
+          class="signature-creation-surface h-[200px] w-full cursor-crosshair touch-none rounded-lg border border-dashed"
+          style="background-color: #ffffff; background-image: none"
+          aria-label="手写签名区域"
+          data-testid="signature-pad-canvas"
+        ></canvas>
+      </div>
+
+      <div v-if="mode === 'text'" class="flex flex-col gap-2">
+        <label class="flex flex-col gap-1.5 text-meta text-ink-muted">
+          签名文字
+          <input
+            v-model="typedText"
+            type="text"
+            class="input"
+            placeholder="例如：张三、2026年9月20日"
+            autocomplete="off"
+            data-testid="signature-text-input"
+            @input="formError = null"
+          />
+        </label>
+        <div
+          class="signature-creation-surface flex h-[140px] items-center overflow-auto rounded-lg border border-dashed px-4"
+          aria-label="文字签名预览"
+          data-testid="signature-text-preview"
+        >
+          <span
+            v-if="typedText.trim()"
+            class="mx-auto whitespace-pre text-[40px] font-medium"
+            :style="{ color: penColor }"
+          >
+            {{ typedText.trim() }}
+          </span>
+          <span v-else class="m-auto text-meta text-[#6b7280]">输入后在此预览</span>
+        </div>
+      </div>
 
       <p v-if="formError" class="text-meta text-danger" role="alert" data-testid="pad-error">
         {{ formError }}
       </p>
 
       <footer class="flex items-center justify-between gap-2.5">
-        <button type="button" class="button button--ghost" :disabled="!hasInk" @click="handleClear">
-          清空重写
+        <button
+          type="button"
+          class="button button--ghost"
+          :disabled="!hasContent"
+          @click="handleClear"
+        >
+          {{ mode === "handwriting" ? "清空重写" : "清空输入" }}
         </button>
         <div class="flex gap-2">
           <button type="button" class="button button--ghost" @click="handleClose">取消</button>
