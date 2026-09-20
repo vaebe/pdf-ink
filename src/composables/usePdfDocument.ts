@@ -18,9 +18,9 @@ GlobalWorkerOptions.workerSrc = PdfWorkerSource;
 
 const resourceBase = `${import.meta.env.BASE_URL}pdfjs/`;
 
-/** 已被数字签名的文档允许编辑，但必须提示用户其原数字签名会失效。 */
+/** 检测到数字签名的文档允许编辑，但必须提示用户其原数字签名会失效。 */
 const SIGNED_DOCUMENT_NOTICE =
-  "该 PDF 已包含有效的数字签名：继续编辑并导出会使原有数字签名失效。原始文件不会被修改，导出结果会另存为新文件。";
+  "该 PDF 已检测到数字签名：继续编辑并导出会使原有数字签名失效。原始文件不会被修改，导出结果会另存为新文件。";
 
 /** 含未填写签名字段的文档：允许编辑，导出不改动该字段。 */
 const EMPTY_SIGNATURE_FIELD_NOTICE =
@@ -29,7 +29,7 @@ const EMPTY_SIGNATURE_FIELD_NOTICE =
 /** 打开文件时的可选行为。 */
 export interface OpenFileOptions {
   /**
-   * 文档已含有效数字签名时调用，由调用方在真正打开前提示用户。
+   * 文档检测到数字签名时调用，由调用方在真正打开前提示用户。
    * 返回 `false` 表示用户放弃打开：此时保持当前会话与已有提示不变，不产生错误。
    * 未提供时按「允许编辑」处理。
    */
@@ -117,53 +117,56 @@ async function performOpen(file: File, requestId: number, options: OpenFileOptio
     iccUrl: `${resourceBase}iccs/`,
   });
 
-  let pdfDocument: PDFDocumentProxy;
+  // 任务所有权：交接给会话之前由本加载流程负责销毁（加载失败、几何读取失败、
+  // 请求过期都会走同一个兜底）；交接之后归会话管理，兜底清理不再碰它。
+  let handedOver = false;
   try {
-    pdfDocument = await loadingTask.promise;
-  } catch (error) {
-    await loadingTask.destroy().catch(() => undefined);
-    throw error;
-  }
+    const pdfDocument = await loadingTask.promise;
 
-  // 过期的 pending 加载单独销毁，不能覆盖当前会话。
-  if (requestId !== latestRequest) {
-    await loadingTask.destroy().catch(() => undefined);
-    return;
-  }
+    // 过期的 pending 加载单独销毁，不能覆盖当前会话。
+    if (requestId !== latestRequest) {
+      return;
+    }
 
-  const pages = await readPageGeometries(pdfDocument);
+    const pages = await readPageGeometries(pdfDocument);
 
-  if (requestId !== latestRequest) {
-    await loadingTask.destroy().catch(() => undefined);
-    return;
-  }
+    if (requestId !== latestRequest) {
+      return;
+    }
 
-  const previousSession = session.value;
-  documentId.value += 1;
-  session.value = {
-    fileName: file.name,
-    originalBytes: exportBytes,
-    pdfDocument,
-    loadingTask,
-    pages,
-    assets: new Map(),
-  };
+    const previousSession = session.value;
+    documentId.value += 1;
+    session.value = {
+      fileName: file.name,
+      originalBytes: exportBytes,
+      pdfDocument,
+      loadingTask,
+      pages,
+      assets: new Map(),
+    };
+    handedOver = true;
 
-  if (signatureInfo.isSigned) {
-    noticeMessage.value = SIGNED_DOCUMENT_NOTICE;
-  } else if (signatureInfo.hasSignatureField) {
-    noticeMessage.value = EMPTY_SIGNATURE_FIELD_NOTICE;
-  } else {
-    noticeMessage.value = null;
-  }
+    if (signatureInfo.isSigned) {
+      noticeMessage.value = SIGNED_DOCUMENT_NOTICE;
+    } else if (signatureInfo.hasSignatureField) {
+      noticeMessage.value = EMPTY_SIGNATURE_FIELD_NOTICE;
+    } else {
+      noticeMessage.value = null;
+    }
 
-  // 等新会话渲染接管后，再销毁旧文档与旧的 worker。
-  await new Promise((resolve) => {
-    window.requestAnimationFrame(() => resolve(undefined));
-  });
+    // 等新会话渲染接管后，再销毁旧文档与旧的 worker。
+    await new Promise((resolve) => {
+      window.requestAnimationFrame(() => resolve(undefined));
+    });
 
-  if (previousSession) {
-    await previousSession.loadingTask.destroy().catch(() => undefined);
+    if (previousSession) {
+      await previousSession.loadingTask.destroy().catch(() => undefined);
+    }
+  } finally {
+    if (!handedOver) {
+      // 销毁失败不掩盖主要错误，错误提示仍以原始异常为准。
+      await loadingTask.destroy().catch(() => undefined);
+    }
   }
 }
 
@@ -177,7 +180,7 @@ export function usePdfDocument() {
   const pageCount = computed(() => session.value?.pages.length ?? 0);
 
   /**
-   * 打开文件。含有效数字签名的文档会先经 `options.confirmSignedDocument` 提示用户，
+   * 打开文件。检测到数字签名的文档会先经 `options.confirmSignedDocument` 提示用户，
    * 用户放弃时保持当前会话不变。
    */
   async function openFile(file: File, options: OpenFileOptions = {}): Promise<void> {

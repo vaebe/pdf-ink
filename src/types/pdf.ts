@@ -46,10 +46,13 @@ export interface DocumentSession {
   assets: Map<string, SignatureAsset>;
 }
 
-/** 文档中数字签名信息的识别结果。 */
+/** 文档中数字签名信息的检测结果。 */
 export interface DigitalSignatureInfo {
   /** 文档包含签名（Sig）字段。 */
   hasSignatureField: boolean;
-  /** 至少一个签名字段已经填写签名值，即文档已被数字签名。 */
+  /**
+   * 至少一个签名字段带有签名值（/V）。
+   * 这是字段与签名值的存在性检测，不证明签名的真实性或有效性。
+   */
   isSigned: boolean;
 }

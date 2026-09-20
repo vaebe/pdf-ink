@@ -4,10 +4,11 @@ import type { DigitalSignatureInfo, DocumentSession, SignaturePlacement } from "
 import { isDecomposableMatrix, matrixToDrawParams } from "./pdfCoordinates";
 
 /**
- * 识别文档中的数字签名状态。
+ * 检测文档中的签名字段及签名值是否存在。
  *
  * 不能凭页面上是否有签名图片判断：这里读取 AcroForm 中类型为 Sig 的字段，
- * 并检查字段是否已经填写签名值（/V）。
+ * 并检查字段是否带有签名值（/V）。这只是存在性检测，不做证书校验或
+ * 密码学验签，不证明签名的真实性或有效性。
  */
 export async function inspectDigitalSignatures(bytes: Uint8Array): Promise<DigitalSignatureInfo> {
   const pdfDocument = await PDFDocument.load(bytes.slice(), {
