@@ -37,6 +37,28 @@ pnpm sync:pdfjs
 pnpm verify:geometry
 ```
 
+## 部署到 GitHub Pages
+
+部署工作流位于 `.github/workflows/deploy-pages.yml`，使用 Vite+ 安装依赖并运行
+`vp run build`（包括 PDF.js 静态资源同步与类型检查），然后发布 `dist`。
+
+1. 在 GitHub 仓库的 **Settings → Pages → Build and deployment → Source** 中选择 **GitHub Actions**。
+2. 将部署配置合并并推送到 `main`，之后每次推送 `main` 都会自动部署。
+   当前在 `develop` 开发时，需要先合并到 `main` 才会触发自动部署。
+3. 在 **Actions → Deploy to GitHub Pages** 查看运行结果；也可以通过 **Run workflow** 手动触发。
+   手动部署其他分支时，需确保 `github-pages` 环境的部署分支规则允许该分支。
+
+默认仓库地址对应的站点为 <https://vaebe.github.io/pdf-ink/>，实际地址以部署结果为准。
+工作流使用 GitHub 自动提供的 `GITHUB_TOKEN`，无需配置个人访问令牌。
+
+构建时根据 Pages 的 `base_path` 设置 `PAGES_BASE_PATH`，应用资源和 PDF.js 资源均使用
+该前缀；本地开发与普通构建默认仍使用 `/`。如需在本地构建相同的仓库子路径：
+
+```bash
+PAGES_BASE_PATH=/pdf-ink/ vp run build
+vp preview
+```
+
 ## 当前支持范围
 
 | 能力                                                       | 状态                             |

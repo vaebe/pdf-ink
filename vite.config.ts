@@ -4,6 +4,8 @@ import { defineConfig, lazyPlugins } from "vite-plus";
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Pages 构建使用站点子路径，本地开发和普通构建仍使用根路径。
+  base: process.env.PAGES_BASE_PATH || "/",
   staged: {
     "*": "vp check --fix",
   },
