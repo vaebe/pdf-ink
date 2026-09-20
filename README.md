@@ -31,11 +31,24 @@ vp preview
 pnpm sync:pdfjs
 ```
 
-坐标与导出契约的数值验证（在 Node 中调用真实的 pdfjs-dist 与 pdf-lib）：
+## 测试
+
+测试由 Vite+ / Vitest 统一执行。数值项目在 Node 中调用真实的 pdfjs-dist 与 pdf-lib；
+浏览器项目使用 Playwright，PDF 读回与 PNG 渲染由 TypeScript 工具完成，无需 Python。
 
 ```bash
-pnpm verify:geometry
+vp test --project geometry       # 19 个用例：原 86 项数值断言及 3 个 PDF 工具用例
+vp test watch --project geometry # 数值检查 watch 模式
+
+# 浏览器验收前，在另一个终端启动应用
+vp run dev --port 5199 --strictPort
+vp test --project acceptance     # 1 个连续集成用例，54 项验收断言
+vp test                         # 执行上述两个项目
 ```
+
+`vp run verify:geometry` 和 `vp run test:acceptance` 保留为对应项目的兼容入口。
+浏览器环境、目录结构与运行方式见 [测试说明](tests/README.md)。
+测试不会自动启动应用，也不会收集历史诊断脚本；产物保存在仓库外。
 
 ## 部署到 GitHub Pages
 
@@ -152,7 +165,7 @@ scripts/
   中间滚动容器的可视区会把扩大出来的部分裁掉，余量可能实际为 0。这一条同时决定
   「离屏释放渲染资源」是否会把滚动变成白页。
   （缩略图那一侧是实测有效的个例，见 `docs/implementation-report.md` 6.8 节；调整前请用
-  `tests/acceptance/probes/thumb-margin-probe.mjs` 重新量一次，不要按结构类推。）
+  `tests/manual/probes/thumb-margin-probe.mjs` 重新量一次，不要按结构类推。）
 - **放置与拖动的边界约束走同一条路径。** 初次放置和后续拖动都调用 `clampMatrixToViewBox`。
   预览层不裁剪越界部分，导出却受页面可见区域限制；只在拖动时约束，就会出现
   「预览完整、导出缺一角」。
@@ -176,5 +189,5 @@ scripts/
 - 执行方案与验收清单：`docs/implementation-plan.md`
 - 本次实现报告：`docs/implementation-report.md`
 - 代码审查标准与流程：`docs/code-review-guidelines.md`（提交前速查：`docs/code-review-checklist.md`）
-- 浏览器验收套件（脚本、探针、夹具，可复现）：`tests/acceptance/README.md`
+- 浏览器验收套件（脚本、探针、夹具，可复现）：`tests/README.md`
 - 某次验收的结论留档（截图、导出样本、报告）：`docs/acceptance/README.md`

@@ -8,9 +8,9 @@
     "build": "node scripts/sync-pdfjs-assets.mjs && vue-tsc -b && vp build",
     "preview": "vp preview",
     "sync:pdfjs": "node scripts/sync-pdfjs-assets.mjs",
-    "verify:geometry": "node scripts/verify-pdf-geometry.mjs",
-    "test:acceptance": "node tests/acceptance/acceptance.mjs",
-    "fixtures:make": "node tests/acceptance/fixtures/make-fixtures.mjs && node tests/acceptance/fixtures/make-heavy-text.mjs && node tests/acceptance/fixtures/make-dot.mjs",
+    "verify:geometry": "vp test --project geometry",
+    "test:acceptance": "vp test --project acceptance",
+    "fixtures:make": "node tests/fixtures/make-fixtures.mjs && node tests/fixtures/make-heavy-text.mjs && node tests/fixtures/make-dot.mjs",
     "postinstall": "node scripts/sync-pdfjs-assets.mjs",
     "prepare": "vp config"
   },

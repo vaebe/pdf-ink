@@ -14,9 +14,9 @@
 
 - [ ] `vp check <改动路径>` —— 0 error / 0 warning / 0 type error（3.1-1）
 - [ ] `vp run build` —— 含 `vue-tsc -b`，无 TS 错误（3.1-2）
-- [ ] `pnpm verify:geometry` —— 全部通过（3.1-3）
+- [ ] `vp test --project geometry` —— 全部通过（3.1-3）
 - [ ] `git diff --check` —— 无输出；**新增文件单独扫一遍**空白/末尾空行/CRLF（3.1-4、3.2-2）
-- [ ] 浏览器验收 `acceptance.mjs` —— 全部通过，连续两轮结论一致；本次新增的可验收行为**已补断言**（3.1-5）
+- [ ] 浏览器验收 `vp test --project acceptance` —— 全部通过，连续两轮结论一致；本次新增的可验收行为**已补断言**（3.1-5）
 
 ### 3. 门禁执行纪律
 
@@ -97,15 +97,15 @@ vp check src vite.config.ts README.md
 vp run build
 
 # 3) 数值契约（必须用 Vite+/pnpm 托管的 Node 24.x）
-pnpm verify:geometry
+vp test --project geometry
 
 # 4) 空白与差异卫生（注意：不覆盖未跟踪文件）
 git diff --check
 git status --short
 
 # 5) 浏览器验收（⚠️ 执行期间不要写项目目录下的任何文件）
-vp dev --port 5199          # 另一个终端；端口必须固定，脚本默认指向 5199
-pnpm test:acceptance        # 54 项；产物落在仓库外的临时目录
+vp run dev --port 5199 --strictPort # 另一个终端；同步资源并固定端口
+vp test --project acceptance # 1 个用例、54 项断言；产物落在仓库外
 
 # 提交后确认钩子回写已进提交
 git diff HEAD --stat
