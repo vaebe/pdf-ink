@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Generated at install/build time — PDF.js runtime assets mirrored from
+# node_modules by `pnpm sync:pdfjs` (see scripts/sync-pdfjs-assets.mjs).
+# Recreated automatically after `pnpm install`; do not commit the mirror.
+/public/pdfjs/
+
+# Local WorkBuddy state (project memory, session notes) — machine-local.
+.workbuddy/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

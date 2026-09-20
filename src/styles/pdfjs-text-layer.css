@@ -1,0 +1,87 @@
+/*
+ * 这一层是 PDF.js 的接口契约，不是应用的设计样式。
+ *
+ * `TextLayer` 会在运行时把 <span> 注入到容器里，并依赖一组 CSS 变量
+ * （--scale-factor / --user-unit / --text-scale-factor …）与 `data-main-rotation`
+ * 属性来做文字定位。选择器与变量名必须与 pdfjs-dist 保持一致，
+ * 因此不能改写成 Tailwind 工具类，只能集中放在这里。
+ *
+ * 参考实现：pdfjs-dist/web/pdf_viewer.css 中的 `.textLayer`。
+ */
+
+@layer components {
+  /*
+   * 页面容器：只承载 PDF.js 需要的缩放变量，其余外观（定位、背景、阴影）
+   * 由模板上的工具类负责。--scale-factor / --user-unit 会在行内被覆盖。
+   */
+  .pdf-page {
+    --scale-factor: 1;
+    --user-unit: 1;
+    --scale-round-x: 1px;
+    --scale-round-y: 1px;
+    --total-scale-factor: calc(var(--scale-factor) * var(--user-unit));
+  }
+
+  .pdf-text-layer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    overflow: clip;
+    text-align: initial;
+    line-height: 1;
+    letter-spacing: normal;
+    word-spacing: normal;
+    text-size-adjust: none;
+    forced-color-adjust: none;
+    transform-origin: 0 0;
+    caret-color: CanvasText;
+    color-scheme: only light;
+
+    /*
+     * 必须保留：让文本层成为层叠上下文，把它内部 z-index:1 的透明文字 span
+     * 关在容器里。否则这些 span 会参与页面层叠，压在 DOM 中后出现的链接层之上
+     * ——文字虽然透明，但仍会吞掉指针事件，页内链接就点不动了。
+     * 与 pdfjs-dist/web/pdf_viewer.css 的 `.textLayer` 保持一致。
+     */
+    z-index: 0;
+
+    --min-font-size: 1;
+    --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+    --min-font-size-inv: calc(1 / var(--min-font-size));
+  }
+
+  .pdf-text-layer[data-main-rotation="90"] {
+    transform: rotate(90deg) translateY(-100%);
+  }
+
+  .pdf-text-layer[data-main-rotation="180"] {
+    transform: rotate(180deg) translate(-100%, -100%);
+  }
+
+  .pdf-text-layer[data-main-rotation="270"] {
+    transform: rotate(270deg) translateX(-100%);
+  }
+
+  .pdf-text-layer :is(span, br) {
+    position: absolute;
+    color: transparent;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+    user-select: text;
+  }
+
+  .pdf-text-layer > :not(.markedContent),
+  .pdf-text-layer .markedContent span:not(.markedContent) {
+    z-index: 1;
+    --font-height: 0;
+    font-size: calc(var(--text-scale-factor) * var(--font-height));
+    --scale-x: 1;
+    --rotate: 0deg;
+    transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+  }
+
+  .pdf-text-layer .markedContent {
+    display: contents;
+  }
+}
