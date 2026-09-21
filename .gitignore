@@ -12,6 +12,24 @@ dist
 dist-ssr
 *.local
 
+# Generated at install/build time — PDF.js runtime assets mirrored from
+# node_modules by `pnpm sync:pdfjs` (see scripts/sync-pdfjs-assets.mjs).
+# Recreated automatically after `pnpm install`; do not commit the mirror.
+/public/pdfjs/
+
+# Local WorkBuddy state (project memory, session notes) — machine-local.
+.workbuddy/
+
+# Acceptance run artifacts (screenshots, exported PDFs, reports). Scripts and
+# fixtures ARE tracked (see tests/acceptance/README.md); artifacts are not.
+# These paths are only a safety net: by default the suite writes its artifacts
+# to a temp dir outside the repo, because `vp dev` full-reloads the page on any
+# write under the project root (see the OUT_BASE comment in
+# tests/acceptance/harness.mjs). Ignored here in case PDFINK_OUT points inward.
+/tests/acceptance/out/
+/tests/acceptance/out-tw/
+/tests/acceptance/.control-backup/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
