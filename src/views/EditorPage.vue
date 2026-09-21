@@ -230,13 +230,24 @@ function handleDocumentKeydown(event: KeyboardEvent): void {
   }
 }
 
+/** 有未导出修改时，请浏览器在刷新或关闭标签页前显示离开确认。 */
+function handleBeforeUnload(event: BeforeUnloadEvent): void {
+  if (!hasUnsavedEdits.value) {
+    return;
+  }
+  event.preventDefault();
+  event.returnValue = "";
+}
+
 onMounted(() => {
   void loadLibrary();
   window.addEventListener("keydown", handleDocumentKeydown);
+  window.addEventListener("beforeunload", handleBeforeUnload);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener("keydown", handleDocumentKeydown);
+  window.removeEventListener("beforeunload", handleBeforeUnload);
   if (statusTimer) {
     window.clearTimeout(statusTimer);
   }
