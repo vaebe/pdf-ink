@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 import { PDFDocument } from "pdf-lib";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import type { DocumentSession, PageGeometry } from "../../src/types/pdf";
-import { ENCRYPTED_PDF_MESSAGE, exportSignedPdf } from "../../src/lib/pdfExport";
+import { ENCRYPTED_PDF_EXPORT_MESSAGE, exportSignedPdf } from "../../src/lib/pdfExport";
 
 const FIXTURE = fileURLToPath(new URL("../fixtures/encrypted-owner-password.pdf", import.meta.url));
 const PLAIN = fileURLToPath(new URL("../fixtures/plain.pdf", import.meta.url));
@@ -64,11 +64,13 @@ test("夹具本身确实是加密文档：默认加载被拒，且 isEncrypted �
   expect(document.getPageCount()).toBe(2);
 });
 
-test("加密文档导出被拒，且提示为统一文案", async () => {
+test("加密文档导出被拒，且提示为导出专用文案", async () => {
   const bytes = await loadFixture(FIXTURE);
   const session = await buildSession(bytes);
 
-  await expect(exportSignedPdf({ session, placements: [] })).rejects.toThrow(ENCRYPTED_PDF_MESSAGE);
+  await expect(exportSignedPdf({ session, placements: [] })).rejects.toThrow(
+    ENCRYPTED_PDF_EXPORT_MESSAGE,
+  );
 
   // 拒绝必须发生在写入之前：源字节不得被改写。
   expect(Buffer.compare(Buffer.from(session.originalBytes), Buffer.from(bytes))).toBe(0);

@@ -3,14 +3,11 @@ import type { PDFImage } from "pdf-lib";
 import type { DigitalSignatureInfo, DocumentSession, SignaturePlacement } from "../types/pdf";
 import { isDecomposableMatrix, matrixToDrawParams } from "./pdfCoordinates";
 
-/**
- * 打开/导出加密 PDF 时的统一提示。
- *
- * 两条路径共用同一句话：打开时由 PDF.js 的 `PasswordException` 触发，导出时由 pdf-lib 的
- * `isEncrypted` 触发——但**并不是每个加密文档两条路径都会拦下来**（例如只设了所有者密码、
- * 用户口令为空的文档，PDF.js 不要求输入密码就能渲染）。同一语义只留一处文案，避免两处漂移。
- */
+/** PDF.js 因 PasswordException 无法打开文档时的提示。 */
 export const ENCRYPTED_PDF_MESSAGE = "该 PDF 已加密，需要密码才能打开，当前版本暂不支持加密文件。";
+
+/** 加密文档可能无需密码即可预览，但当前导出实现不支持解密。 */
+export const ENCRYPTED_PDF_EXPORT_MESSAGE = "该 PDF 已加密，当前版本暂不支持导出加密文件。";
 
 /**
  * 检测文档中的签名字段及签名值是否存在。
@@ -77,7 +74,7 @@ export async function exportSignedPdf({
     updateMetadata: false,
   });
   if (pdfDocument.isEncrypted) {
-    throw new Error(ENCRYPTED_PDF_MESSAGE);
+    throw new Error(ENCRYPTED_PDF_EXPORT_MESSAGE);
   }
 
   if (pdfDocument.getPageCount() !== session.pages.length) {
