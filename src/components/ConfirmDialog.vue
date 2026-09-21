@@ -135,7 +135,7 @@ onBeforeUnmount(() => {
   >
     <div
       ref="panelRef"
-      class="flex w-full max-w-[440px] animate-panel-in flex-col gap-4 rounded-xl bg-surface p-5 shadow-panel motion-reduce:animate-none"
+      class="flex w-full max-w-[440px] animate-panel-in flex-col gap-4 rounded-xl bg-surface p-5 text-ink shadow-panel motion-reduce:animate-none"
       role="dialog"
       aria-modal="true"
       :aria-labelledby="titleId"
