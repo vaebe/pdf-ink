@@ -65,29 +65,10 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
 </script>
 
 <template>
-  <header
-    class="flex flex-wrap items-center gap-4.5 border-b border-line bg-surface px-4 py-2.5"
-    data-testid="toolbar"
-  >
-    <div class="flex items-center gap-1.5">
-      <button
-        type="button"
-        class="button button--primary"
-        :disabled="props.isLoading"
-        @click="fileInputRef?.click()"
-      >
-        {{ props.isLoading ? "正在打开…" : "打开 PDF" }}
-      </button>
-      <input
-        ref="fileInputRef"
-        class="sr-only"
-        data-focus-skip
-        type="file"
-        accept="application/pdf,.pdf"
-        @change="handleFileChange"
-      />
+  <header class="editor-toolbar border-b border-line bg-surface" data-testid="toolbar">
+    <div class="toolbar-file flex min-w-0 items-center gap-3">
       <span
-        class="max-w-[260px] truncate text-meta text-ink-muted"
+        class="min-w-0 truncate text-body font-medium text-ink"
         :title="props.fileName ?? ''"
         data-testid="file-name"
       >
@@ -95,96 +76,100 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
       </span>
     </div>
 
-    <div class="flex items-center gap-1.5">
-      <label
-        class="flex items-center gap-1.5 text-meta text-ink-muted"
-        data-testid="page-indicator"
-      >
-        <span>页码</span>
-        <input
-          v-model="pageInput"
-          class="input w-14 px-1.5 py-[5px] text-center"
-          data-testid="page-input"
-          type="text"
-          inputmode="numeric"
+    <div class="toolbar-tools">
+      <div class="flex items-center gap-1.5">
+        <label
+          class="flex items-center gap-1.5 text-meta text-ink-muted"
+          data-testid="page-indicator"
+        >
+          <span>页码</span>
+          <input
+            v-model="pageInput"
+            class="input w-14 px-1.5 py-[5px] text-center"
+            data-testid="page-input"
+            type="text"
+            inputmode="numeric"
+            :disabled="props.pageCount === 0"
+            @change="commitPage"
+            @keydown.enter.prevent="commitPage"
+            @blur="commitPage"
+          />
+          <span>/ {{ Math.max(props.pageCount, 1) }}</span>
+        </label>
+      </div>
+
+      <div class="flex items-center gap-1.5">
+        <button
+          type="button"
+          class="button button--ghost"
           :disabled="props.pageCount === 0"
-          @change="commitPage"
-          @keydown.enter.prevent="commitPage"
-          @blur="commitPage"
-        />
-        <span>/ {{ Math.max(props.pageCount, 1) }}</span>
-      </label>
-    </div>
+          aria-label="缩小"
+          title="缩小"
+          @click="emit('zoomOut')"
+        >
+          −
+        </button>
+        <span
+          class="min-w-[52px] text-center text-meta text-ink-muted tabular-nums"
+          data-testid="zoom-level"
+        >
+          {{ Math.round(props.effectiveScale * 100) }}%
+        </span>
+        <button
+          type="button"
+          class="button button--ghost"
+          :disabled="props.pageCount === 0"
+          aria-label="放大"
+          title="放大"
+          @click="emit('zoomIn')"
+        >
+          ＋
+        </button>
+        <button
+          type="button"
+          class="button button--ghost"
+          :class="{ 'button--toggled': props.fitWidth }"
+          :disabled="props.pageCount === 0"
+          title="自适应宽度（页面宽度跟随窗口）"
+          :aria-pressed="props.fitWidth"
+          data-testid="fit-width"
+          @click="toggleFitWidth"
+        >
+          自适应宽度
+        </button>
+      </div>
 
-    <div class="flex items-center gap-1.5">
-      <button
-        type="button"
-        class="button button--ghost"
-        :disabled="props.pageCount === 0"
-        title="缩小"
-        @click="emit('zoomOut')"
-      >
-        −
-      </button>
-      <span
-        class="min-w-[52px] text-center text-meta text-ink-muted tabular-nums"
-        data-testid="zoom-level"
-      >
-        {{ Math.round(props.effectiveScale * 100) }}%
-      </span>
-      <button
-        type="button"
-        class="button button--ghost"
-        :disabled="props.pageCount === 0"
-        title="放大"
-        @click="emit('zoomIn')"
-      >
-        ＋
-      </button>
-      <button
-        type="button"
-        class="button button--ghost"
-        :class="{ 'button--toggled': props.fitWidth }"
-        :disabled="props.pageCount === 0"
-        title="自适应宽度（页面宽度跟随窗口）"
-        data-testid="fit-width"
-        @click="toggleFitWidth"
-      >
-        自适应宽度
-      </button>
+      <div class="flex items-center gap-1.5">
+        <button
+          type="button"
+          class="button button--ghost"
+          :disabled="!props.canUndo"
+          title="撤销（⌘/Ctrl + Z）"
+          @click="emit('undo')"
+        >
+          撤销
+        </button>
+        <button
+          type="button"
+          class="button button--ghost"
+          :disabled="!props.canRedo"
+          title="重做（⌘/Ctrl + Shift + Z）"
+          @click="emit('redo')"
+        >
+          重做
+        </button>
+        <button
+          v-if="props.isPlacing"
+          type="button"
+          class="button button--ghost"
+          title="退出放置模式（Esc）"
+          @click="emit('cancelPlacement')"
+        >
+          退出放置
+        </button>
+      </div>
     </div>
-
-    <div class="flex items-center gap-1.5">
-      <button
-        type="button"
-        class="button button--ghost"
-        :disabled="!props.canUndo"
-        title="撤销（⌘/Ctrl + Z）"
-        @click="emit('undo')"
-      >
-        撤销
-      </button>
-      <button
-        type="button"
-        class="button button--ghost"
-        :disabled="!props.canRedo"
-        title="重做（⌘/Ctrl + Shift + Z）"
-        @click="emit('redo')"
-      >
-        重做
-      </button>
-      <button
-        v-if="props.isPlacing"
-        type="button"
-        class="button button--ghost"
-        title="退出放置模式（Esc）"
-        @click="emit('cancelPlacement')"
-      >
-        退出放置
-      </button>
-    </div>
-
-    <div class="ml-auto flex items-center gap-1.5">
+    <div class="toolbar-export flex items-center justify-end gap-1.5">
       <button
         type="button"
         class="button button--primary"
@@ -194,6 +179,67 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
       >
         {{ props.isExporting ? "正在导出…" : "下载签名后的 PDF" }}
       </button>
+      <button
+        type="button"
+        class="button button--ghost"
+        :disabled="props.isLoading"
+        @click="fileInputRef?.click()"
+      >
+        {{ props.isLoading ? "正在打开…" : "打开 PDF" }}
+      </button>
+      <input
+        ref="fileInputRef"
+        class="sr-only"
+        data-focus-skip
+        tabindex="-1"
+        aria-label="打开 PDF"
+        type="file"
+        accept="application/pdf,.pdf"
+        @change="handleFileChange"
+      />
     </div>
   </header>
 </template>
+
+<style scoped>
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 8px 16px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.toolbar-file {
+  flex: 1 0 170px;
+  max-width: 320px;
+}
+.toolbar-file .button {
+  flex-shrink: 0;
+}
+.toolbar-export {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.toolbar-tools {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
+  border-left: 1px solid var(--border);
+  padding-left: 12px;
+}
+.toolbar-tools > div + div {
+  border-left: 1px solid var(--border);
+  padding-left: 12px;
+}
+.toolbar-tools .button--ghost:not(.button--toggled) {
+  border-color: transparent;
+  background: transparent;
+}
+.toolbar-tools .button--ghost:not(.button--toggled):hover:enabled {
+  background: var(--surface-muted);
+  border-color: var(--border);
+}
+</style>

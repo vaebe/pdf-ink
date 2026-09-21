@@ -21,7 +21,8 @@
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.3.289",
     "signature_pad": "^5.1.4",
-    "vue": "^3.5.42"
+    "vue": "^3.5.42",
+    "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

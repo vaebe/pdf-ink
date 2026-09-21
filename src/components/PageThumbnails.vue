@@ -181,13 +181,13 @@ watch(documentId, () => {
 
 <template>
   <aside
-    class="flex w-[172px] flex-none flex-col gap-2.5 overflow-auto border-r border-line bg-surface p-3"
+    class="flex w-[172px] flex-none flex-col gap-5 overflow-auto border-r border-line bg-subtle p-4"
   >
     <header class="flex items-center justify-between gap-2">
       <h2 class="text-body">页面</h2>
       <span class="text-micro text-ink-muted">{{ pages.length }} 页</span>
     </header>
-    <ol class="flex flex-col gap-2">
+    <ol class="flex flex-col gap-4">
       <li
         v-for="page in pages"
         :key="`${documentId}-${page.pageIndex}`"
@@ -197,12 +197,14 @@ watch(documentId, () => {
       >
         <button
           type="button"
-          class="flex w-full cursor-pointer flex-col items-center gap-1 rounded-md border p-1.5"
+          class="flex w-full cursor-pointer flex-col items-center gap-2 rounded-md border p-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           :class="
             props.currentPage === page.pageIndex
-              ? 'border-accent bg-subtle ring-2 ring-accent-soft'
-              : 'border-line bg-subtle'
+              ? 'border-accent bg-surface ring-2 ring-accent-soft'
+              : 'border-transparent bg-transparent hover:border-line-strong hover:bg-surface'
           "
+          :aria-label="`第 ${page.pageIndex + 1} 页`"
+          :aria-current="props.currentPage === page.pageIndex ? 'page' : undefined"
           @click="emit('select', page.pageIndex)"
         >
           <canvas

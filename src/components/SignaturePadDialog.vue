@@ -389,14 +389,14 @@ const hasContent = computed(() =>
     @keydown.esc="handleClose"
   >
     <div
-      class="flex w-full max-w-[560px] animate-panel-in flex-col gap-3.5 rounded-[10px] bg-surface p-4.5 shadow-panel motion-reduce:animate-none"
+      class="flex w-full max-h-[calc(100dvh-40px)] max-w-[600px] animate-panel-in flex-col gap-5 overflow-y-auto rounded-xl bg-surface p-6 shadow-panel motion-reduce:animate-none"
     >
       <header class="flex items-center justify-between gap-2.5">
         <h2>新建签名</h2>
         <button type="button" class="button button--ghost" @click="handleClose">关闭</button>
       </header>
 
-      <div class="flex gap-2" role="group" aria-label="签名输入方式">
+      <div class="flex gap-1 rounded-lg bg-subtle p-1" role="group" aria-label="签名输入方式">
         <button
           type="button"
           class="button button--ghost flex-1"
@@ -424,7 +424,7 @@ const hasContent = computed(() =>
             v-for="option in COLOR_OPTIONS"
             :key="option.value"
             type="button"
-            class="size-7 rounded-full border-2 transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            class="size-8 rounded-full border-2 transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             :class="penColor === option.value ? 'border-accent' : 'border-line-strong'"
             :style="{ backgroundColor: option.value }"
             :aria-label="option.label"
@@ -436,7 +436,7 @@ const hasContent = computed(() =>
             <input
               v-model="penColor"
               type="color"
-              class="h-7 w-9 cursor-pointer rounded border border-line bg-surface p-0.5"
+              class="h-8 w-10 cursor-pointer rounded border border-line bg-surface p-0.5"
               aria-label="自定义签名颜色"
             />
           </label>
@@ -503,7 +503,7 @@ const hasContent = computed(() =>
         {{ formError }}
       </p>
 
-      <footer class="flex items-center justify-between gap-2.5">
+      <footer class="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
         <button
           type="button"
           class="button button--ghost"
