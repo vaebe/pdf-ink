@@ -69,14 +69,31 @@ function useTemplate(id: string): void {
 
 <template>
   <aside
-    class="flex w-[248px] flex-none flex-col gap-2.5 overflow-auto border-l border-line bg-surface p-3"
+    class="flex w-[264px] flex-none flex-col gap-4 overflow-auto border-l border-line bg-surface p-4"
     data-testid="signature-library"
   >
-    <header class="flex items-center justify-between gap-2">
-      <h2 class="text-body">签名库</h2>
-      <button type="button" class="button button--primary button--small" @click="emit('create')">
-        新建签名
-      </button>
+    <header class="flex flex-col items-stretch gap-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-body">签名库</h2>
+        <span class="text-micro text-ink-muted">{{ templates.length }} 个签名</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="button button--primary flex-1 whitespace-nowrap"
+          @click="emit('create')"
+        >
+          新建签名
+        </button>
+        <button
+          type="button"
+          class="button button--ghost whitespace-nowrap"
+          title="重新加载签名库"
+          @click="loadLibrary"
+        >
+          重新加载
+        </button>
+      </div>
     </header>
 
     <p v-if="isLibraryLoading" class="text-meta text-ink-muted">正在读取本地签名库…</p>
@@ -88,29 +105,31 @@ function useTemplate(id: string): void {
       放置模式已开启：在页面上单击放置签名，放置一次后自动退出；按 Esc 可提前取消。
     </p>
 
-    <ul v-if="templates.length > 0" class="flex flex-col gap-2">
+    <ul v-if="templates.length > 0" class="flex flex-col gap-3">
       <li
         v-for="template in templates"
         :key="template.id"
-        class="flex flex-col gap-1.5 rounded-lg border p-2"
+        class="flex flex-col gap-2 rounded-lg border p-2.5"
         :class="
           activeTemplateId === template.id
             ? 'border-accent bg-accent-soft'
-            : 'border-line bg-subtle'
+            : 'border-line bg-surface'
         "
         :data-active="activeTemplateId === template.id"
         data-testid="library-item"
       >
         <button
           type="button"
-          class="flex cursor-pointer text-left text-inherit"
+          class="flex min-h-[88px] cursor-pointer items-center rounded-md bg-white text-left text-inherit focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          :aria-label="`使用签名 ${templates.indexOf(template) + 1}`"
+          :aria-pressed="activeTemplateId === template.id"
           data-testid="library-item-pick"
           title="使用签名"
           @click="useTemplate(template.id)"
         >
           <img
             v-if="previewUrl(template.id)"
-            class="max-h-[62px] w-full rounded-sm border border-line bg-white object-contain"
+            class="h-[88px] w-full rounded-sm bg-white object-contain p-2"
             data-testid="library-item-preview"
             :src="previewUrl(template.id)"
             alt="签名笔迹"
@@ -120,7 +139,7 @@ function useTemplate(id: string): void {
         <div class="flex items-center justify-end">
           <button
             type="button"
-            class="button button--ghost button--small"
+            class="button button--ghost button--small border-transparent text-ink-muted"
             :disabled="busyId === template.id"
             @click="confirmRemove(template.id)"
           >
@@ -133,11 +152,5 @@ function useTemplate(id: string): void {
     <p v-else-if="!isLibraryLoading" class="text-meta text-ink-muted">
       还没有保存的签名。点击“新建签名”手写一个，之后可以重复使用。
     </p>
-
-    <footer class="mt-auto">
-      <button type="button" class="button button--ghost button--small" @click="loadLibrary">
-        重新加载签名库
-      </button>
-    </footer>
   </aside>
 </template>

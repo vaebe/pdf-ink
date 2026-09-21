@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-21T09:34:42.248018+00:00",
+  "title": "Design System: PDFInk 首页",
+  "extensions": {
+    "colorMeta": {
+      "home-paper": {
+        "role": "neutral",
+        "displayName": "柔白纸面"
+      },
+      "home-ink": {
+        "role": "primary",
+        "displayName": "石墨"
+      },
+      "home-muted": {
+        "role": "neutral",
+        "displayName": "辅助灰"
+      },
+      "home-line": {
+        "role": "neutral",
+        "displayName": "细线灰"
+      }
+    },
+    "shadows": [
+      {
+        "name": "signature-paper",
+        "value": "0 6px 24px -12px #25252726",
+        "purpose": "仅首页签名样张的纸面阴影。"
+      }
+    ],
+    "motion": [
+      {
+        "name": "ink-write",
+        "value": "1.5s cubic-bezier(0.16, 1, 0.3, 1) both",
+        "purpose": "首页 SVG 落笔一次；底线延迟 0.3s，减少动态效果时关闭。"
+      },
+      {
+        "name": "button-transition",
+        "value": "background 0.18s, transform 0.18s",
+        "purpose": "首页按钮状态过渡，减少动态效果时关闭。"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "home-compact",
+        "value": "600px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "选择 PDF 文件",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "首页唯一文件选择主入口；预览只展示视觉。",
+      "html": "<button class=\"ds-select-file\" type=\"button\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" aria-hidden=\"true\"><path d=\"M12 16V4m-4 4 4-4 4 4M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5\" /></svg>选择 PDF 文件</button>",
+      "css": ".ds-select-file { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 54px; padding: 0 28px; border: 1px solid #252527; border-radius: 7px; background: #252527; color: #fff; font-size: 15px; cursor: pointer; transition: background 0.18s, transform 0.18s; } .ds-select-file:hover:enabled { background: #424246; transform: translateY(-1px); } .ds-select-file:active:enabled { transform: translateY(0); } .ds-select-file:disabled { opacity: 0.6; cursor: wait; } .ds-select-file:focus-visible { outline: 2px solid #68686d; outline-offset: 5px; } @media (prefers-reduced-motion: reduce) { .ds-select-file { transition: none; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "极简签名入口",
+    "overview": "柔白纸面与石墨文字构成安静、简洁的签名入口。中文衬线标题与细线手写笔迹提供识别度，主按钮保持明确，签名样张以轻微阴影表达纸面。",
+    "keyCharacteristics": ["柔白石墨", "中文衬线标题", "克制纸面与手写笔迹"],
+    "rules": [],
+    "dos": [
+      "Do 保留柔白、石墨和细线组成的首页视觉层次。",
+      "Do 保持文件选择入口突出，并保留加载、错误和键盘焦点状态。",
+      "Do 尊重减少动态效果设置。"
+    ],
+    "donts": [
+      "Don't 将首页令牌用于覆盖操作页或全局语义令牌。",
+      "Don't 在首页增加强配色、场景包装或功能卡片。"
+    ]
+  }
+}

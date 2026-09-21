@@ -173,7 +173,10 @@ export async function runAcceptance(onCheck) {
       focusedLabel: await page.evaluate(() => document.activeElement?.textContent?.trim() ?? ""),
       /** 弹窗打开期间工具栏是否有加载态。 */
       toolbarLabel: (
-        await page.locator("[data-testid=toolbar] .button--primary").first().innerText()
+        await page
+          .locator("[data-testid=toolbar] button")
+          .filter({ hasText: /^(打开 PDF|正在打开…)$/ })
+          .innerText()
       ).trim(),
     };
     if (beforeClick) {
@@ -188,14 +191,20 @@ export async function runAcceptance(onCheck) {
     return captured;
   }
 
+  /** 首次访问及刷新后均回到首页，文件打开成功后才挂载工具栏。 */
+  async function waitForHome(page) {
+    await page.locator("button").filter({ hasText: "选择 PDF 文件" }).waitFor();
+  }
+
   async function openApp(page) {
     await page.goto(APP, { waitUntil: "domcontentloaded" });
-    await page.waitForSelector("[data-testid=toolbar]");
+    await waitForHome(page);
   }
 
   async function openPdf(page, fileName, expectedPages) {
     await page
-      .locator("[data-testid=toolbar] input[type=file]")
+      // 首页首次打开与编辑页换文件各自只有一个 PDF 输入入口。
+      .getByLabel(/^(选择 PDF 文件|打开 PDF)$/)
       .setInputFiles(`${FIX}/${fileName}`);
     // 当前文档还有未导出的签名时，应用会先弹「放弃当前编辑？」确认框。
     await handleConfirmDialog(page, "放弃并打开", 900);
@@ -497,7 +506,7 @@ export async function runAcceptance(onCheck) {
       });
     });
     await page.reload({ waitUntil: "domcontentloaded" });
-    await page.waitForSelector("[data-testid=toolbar]");
+    await waitForHome(page);
 
     note(`Chromium(Playwright) ${browser.version()} / 视口 1600x950 / DPR 1`);
 
@@ -547,7 +556,7 @@ export async function runAcceptance(onCheck) {
     );
 
     await page.reload({ waitUntil: "domcontentloaded" });
-    await page.waitForSelector("[data-testid=toolbar]");
+    await waitForHome(page);
     const countAfterReloadEmptyState = await libraryItemCount(page);
     await openPdf(page, "plain.pdf", 2);
     // 库由 loadLibrary 异步填充，openPdf 只保证文档接管，不保证库已就绪；等预览图到位再断言身份。

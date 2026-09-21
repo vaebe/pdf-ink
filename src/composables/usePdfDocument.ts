@@ -202,6 +202,18 @@ export function usePdfDocument() {
     }
   }
 
+  /** 离开操作页时释放当前文档，并使尚未结束的加载请求失效。 */
+  function closeDocument(): void {
+    latestRequest += 1;
+    const previousSession = session.value;
+    session.value = null;
+    isLoading.value = false;
+    clearMessages();
+    if (previousSession) {
+      void previousSession.loadingTask.destroy().catch(() => undefined);
+    }
+  }
+
   function clearMessages(): void {
     loadError.value = null;
     noticeMessage.value = null;
@@ -218,5 +230,6 @@ export function usePdfDocument() {
     pageCount,
     openFile,
     clearMessages,
+    closeDocument,
   };
 }
