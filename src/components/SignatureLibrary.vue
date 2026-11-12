@@ -83,26 +83,20 @@ function useTemplate(id: string): void {
         <Badge variant="secondary">{{ templates.length }} 个签名</Badge>
       </div>
       <div class="flex items-center gap-2">
-        <Button
-          type="button"
-          class="flex-1"
-          variant="default"
-          @click="emit('create')"
-        >
+        <Button type="button" class="flex-1" variant="default" @click="emit('create')">
           新建签名
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          title="重新加载签名库"
-          @click="loadLibrary"
-        >
+        <Button type="button" variant="ghost" title="重新加载签名库" @click="loadLibrary">
           重新加载
         </Button>
       </div>
     </header>
 
-    <p v-if="isLibraryLoading" class="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+    <p
+      v-if="isLibraryLoading"
+      class="flex items-center gap-2 text-sm text-muted-foreground"
+      role="status"
+    >
       <Spinner aria-label="正在读取" />正在读取本地签名库…
     </p>
     <Alert v-else-if="libraryError" variant="destructive">

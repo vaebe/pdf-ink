@@ -81,10 +81,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
     <div class="toolbar-tools">
       <Separator orientation="vertical" class="self-stretch" />
       <div class="flex items-center gap-1.5">
-        <Label
-          class="flex items-center gap-1.5"
-          data-testid="page-indicator"
-        >
+        <Label class="flex items-center gap-1.5" data-testid="page-indicator">
           <span>页码</span>
           <Input
             v-model="pageInput"
@@ -186,6 +183,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
       <Button
         type="button"
         variant="ghost"
+        data-testid="open-pdf"
         :disabled="props.isLoading"
         @click="fileInputRef?.click()"
       >

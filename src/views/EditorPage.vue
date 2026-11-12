@@ -292,9 +292,7 @@ const canExport = computed(() => session.value !== null && placements.value.leng
       data-tone="error"
     >
       <AlertDescription class="flex-1">{{ loadError }}</AlertDescription>
-      <Button type="button" variant="ghost" size="sm" @click="clearMessages">
-        知道了
-      </Button>
+      <Button type="button" variant="ghost" size="sm" @click="clearMessages"> 知道了 </Button>
     </Alert>
     <Alert
       v-else-if="noticeMessage"
@@ -304,9 +302,7 @@ const canExport = computed(() => session.value !== null && placements.value.leng
       data-tone="notice"
     >
       <AlertDescription class="flex-1">{{ noticeMessage }}</AlertDescription>
-      <Button type="button" variant="ghost" size="sm" @click="clearMessages">
-        知道了
-      </Button>
+      <Button type="button" variant="ghost" size="sm" @click="clearMessages"> 知道了 </Button>
     </Alert>
     <Alert
       v-if="exportError"
@@ -316,9 +312,7 @@ const canExport = computed(() => session.value !== null && placements.value.leng
       data-tone="error"
     >
       <AlertDescription class="flex-1">导出失败：{{ exportError }}</AlertDescription>
-      <Button type="button" variant="ghost" size="sm" @click="exportError = null">
-        知道了
-      </Button>
+      <Button type="button" variant="ghost" size="sm" @click="exportError = null"> 知道了 </Button>
     </Alert>
     <main class="flex min-h-0 flex-1">
       <PageThumbnails v-if="session" :current-page="currentPage" @select="currentPage = $event" />

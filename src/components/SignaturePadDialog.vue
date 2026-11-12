@@ -420,7 +420,9 @@ const hasContent = computed(() =>
     >
       <DialogHeader class="flex-row items-center justify-between">
         <DialogTitle>新建签名</DialogTitle>
-        <Button type="button" variant="ghost" :disabled="isSaving" @click="handleClose">关闭</Button>
+        <Button type="button" variant="ghost" :disabled="isSaving" @click="handleClose"
+          >关闭</Button
+        >
       </DialogHeader>
 
       <ToggleGroup
@@ -451,7 +453,11 @@ const hasContent = computed(() =>
             :value="option.value"
             :aria-label="option.label"
           >
-            <span class="size-4 rounded-full" :style="{ backgroundColor: option.value }" aria-hidden="true"></span>
+            <span
+              class="size-4 rounded-full"
+              :style="{ backgroundColor: option.value }"
+              aria-hidden="true"
+            ></span>
           </ToggleGroupItem>
         </ToggleGroup>
         <Label :for="colorInputId">自定义</Label>
@@ -530,23 +536,17 @@ const hasContent = computed(() =>
       </Alert>
 
       <Separator />
-      <DialogFooter class="flex-row flex-wrap items-center justify-between gap-3 sm:justify-between">
-        <Button
-          type="button"
-          variant="ghost"
-          :disabled="!hasContent"
-          @click="handleClear"
-        >
+      <DialogFooter
+        class="flex-row flex-wrap items-center justify-between gap-3 sm:justify-between"
+      >
+        <Button type="button" variant="ghost" :disabled="!hasContent" @click="handleClear">
           {{ mode === "handwriting" ? "清空重写" : "清空输入" }}
         </Button>
         <div class="flex gap-2">
-          <Button type="button" variant="ghost" :disabled="isSaving" @click="handleClose">取消</Button>
-          <Button
-            type="button"
-            variant="default"
-            :disabled="!canSave"
-            @click="handleSave"
+          <Button type="button" variant="ghost" :disabled="isSaving" @click="handleClose"
+            >取消</Button
           >
+          <Button type="button" variant="default" :disabled="!canSave" @click="handleSave">
             <Spinner v-if="isSaving" data-icon="inline-start" aria-label="正在保存" />
             {{ isSaving ? "保存中…" : "保存到签名库" }}
           </Button>

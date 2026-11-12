@@ -400,7 +400,11 @@ watch(session, () => {
 
     <SignatureOverlay :page-index="props.pageIndex" :viewport="viewport" />
 
-    <Alert v-if="renderError" variant="destructive" class="absolute left-2 top-2 w-[calc(100%-1rem)]">
+    <Alert
+      v-if="renderError"
+      variant="destructive"
+      class="absolute left-2 top-2 w-[calc(100%-1rem)]"
+    >
       <AlertDescription>{{ renderError }}</AlertDescription>
     </Alert>
   </div>

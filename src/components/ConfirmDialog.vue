@@ -34,7 +34,8 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
-const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+const previouslyFocused =
+  document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
 function restoreFocus(event: Event): void {
   event.preventDefault();
