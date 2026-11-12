@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Empty, EmptyHeader, EmptyDescription } from "./ui/empty";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { usePdfDocument } from "../composables/usePdfDocument";
 import PdfPage from "./PdfPage.vue";
@@ -185,7 +186,11 @@ watch(documentId, () => {
         :scale="effectiveScale"
         @jump="scrollToPage"
       />
-      <p v-if="pages.length === 0" class="text-ink-muted">尚未打开 PDF。</p>
+      <Empty v-if="pages.length === 0">
+        <EmptyHeader>
+          <EmptyDescription>尚未打开 PDF。</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     </div>
   </div>
 </template>

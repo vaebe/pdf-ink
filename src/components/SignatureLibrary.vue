@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { Button } from "./ui/button";
+import { Alert, AlertDescription } from "./ui/alert";
+import { Badge } from "./ui/badge";
+import { Empty, EmptyHeader, EmptyDescription } from "./ui/empty";
+import { Spinner } from "./ui/spinner";
 import { onBeforeUnmount, ref, watch } from "vue";
 import { useConfirmDialog } from "../composables/useConfirmDialog";
 import { useSignatureLibrary } from "../composables/useSignatureLibrary";
@@ -75,35 +80,40 @@ function useTemplate(id: string): void {
     <header class="flex flex-col items-stretch gap-4">
       <div class="flex items-center justify-between">
         <h2 class="text-body">签名库</h2>
-        <span class="text-micro text-ink-muted">{{ templates.length }} 个签名</span>
+        <Badge variant="secondary">{{ templates.length }} 个签名</Badge>
       </div>
       <div class="flex items-center gap-2">
-        <button
+        <Button
           type="button"
-          class="button button--primary flex-1 whitespace-nowrap"
+          class="flex-1"
+          variant="default"
           @click="emit('create')"
         >
           新建签名
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          class="button button--ghost whitespace-nowrap"
+          variant="ghost"
           title="重新加载签名库"
           @click="loadLibrary"
         >
           重新加载
-        </button>
+        </Button>
       </div>
     </header>
 
-    <p v-if="isLibraryLoading" class="text-meta text-ink-muted">正在读取本地签名库…</p>
-    <p v-else-if="libraryError" class="text-meta text-danger" role="alert">
-      {{ libraryError }}
+    <p v-if="isLibraryLoading" class="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+      <Spinner aria-label="正在读取" />正在读取本地签名库…
     </p>
+    <Alert v-else-if="libraryError" variant="destructive">
+      <AlertDescription>{{ libraryError }}</AlertDescription>
+    </Alert>
 
-    <p v-if="isPlacing" class="rounded-md bg-accent-soft px-2.5 py-2 text-meta text-accent-strong">
-      放置模式已开启：在页面上单击放置签名，放置一次后自动退出；按 Esc 可提前取消。
-    </p>
+    <Alert v-if="isPlacing" role="status">
+      <AlertDescription>
+        放置模式已开启：在页面上单击放置签名，放置一次后自动退出；按 Esc 可提前取消。
+      </AlertDescription>
+    </Alert>
 
     <ul v-if="templates.length > 0" class="flex flex-col gap-3">
       <li
@@ -118,9 +128,10 @@ function useTemplate(id: string): void {
         :data-active="activeTemplateId === template.id"
         data-testid="library-item"
       >
-        <button
+        <Button
           type="button"
-          class="flex min-h-[88px] cursor-pointer items-center rounded-md bg-white text-left text-inherit focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          variant="outline"
+          class="h-auto min-h-[88px] p-0"
           :aria-label="`使用签名 ${templates.indexOf(template) + 1}`"
           :aria-pressed="activeTemplateId === template.id"
           data-testid="library-item-pick"
@@ -134,23 +145,29 @@ function useTemplate(id: string): void {
             :src="previewUrl(template.id)"
             alt="签名笔迹"
           />
-        </button>
+        </Button>
 
         <div class="flex items-center justify-end">
-          <button
+          <Button
             type="button"
-            class="button button--ghost button--small border-transparent text-ink-muted"
+            variant="ghost"
+            size="sm"
             :disabled="busyId === template.id"
             @click="confirmRemove(template.id)"
           >
+            <Spinner v-if="busyId === template.id" data-icon="inline-start" aria-label="正在删除" />
             删除
-          </button>
+          </Button>
         </div>
       </li>
     </ul>
 
-    <p v-else-if="!isLibraryLoading" class="text-meta text-ink-muted">
-      还没有保存的签名。点击“新建签名”手写一个，之后可以重复使用。
-    </p>
+    <Empty v-else-if="!isLibraryLoading" class="flex-none px-0 md:px-0">
+      <EmptyHeader>
+        <EmptyDescription>
+          还没有保存的签名。点击“新建签名”手写一个，之后可以重复使用。
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   </aside>
 </template>

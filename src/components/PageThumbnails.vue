@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
 import { computed, onBeforeUnmount, onMounted, watch } from "vue";
 import { RenderingCancelledException } from "pdfjs-dist";
 import type { RenderTask } from "pdfjs-dist";
@@ -185,7 +187,7 @@ watch(documentId, () => {
   >
     <header class="flex items-center justify-between gap-2">
       <h2 class="text-body">页面</h2>
-      <span class="text-micro text-ink-muted">{{ pages.length }} 页</span>
+      <Badge variant="secondary">{{ pages.length }} 页</Badge>
     </header>
     <ol class="flex flex-col gap-4">
       <li
@@ -195,14 +197,10 @@ watch(documentId, () => {
         :data-thumb-index="page.pageIndex"
         data-testid="thumb-item"
       >
-        <button
+        <Button
           type="button"
-          class="flex w-full cursor-pointer flex-col items-center gap-2 rounded-md border p-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          :class="
-            props.currentPage === page.pageIndex
-              ? 'border-accent bg-surface ring-2 ring-accent-soft'
-              : 'border-transparent bg-transparent hover:border-line-strong hover:bg-surface'
-          "
+          class="h-auto w-full flex-col gap-2 p-2"
+          :variant="props.currentPage === page.pageIndex ? 'secondary' : 'ghost'"
           :aria-label="`第 ${page.pageIndex + 1} 页`"
           :aria-current="props.currentPage === page.pageIndex ? 'page' : undefined"
           @click="emit('select', page.pageIndex)"
@@ -213,7 +211,7 @@ watch(documentId, () => {
             data-testid="thumb-canvas"
           ></canvas>
           <span class="text-micro text-ink-muted">{{ page.pageIndex + 1 }}</span>
-        </button>
+        </Button>
       </li>
     </ol>
   </aside>

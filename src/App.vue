@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onBeforeUnmount } from "vue";
 import { RouterView } from "vue-router";
+import { Toaster } from "./components/ui/sonner";
+import "vue-sonner/style.css";
 import {
   initSignatureEditor,
   disposeSignatureEditor,
@@ -17,4 +19,5 @@ onBeforeUnmount(() => {
 
 <template>
   <RouterView />
+  <Toaster position="top-center" :duration="3200" />
 </template>
