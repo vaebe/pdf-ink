@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { Button } from "../components/ui/button";
+import { Alert, AlertDescription } from "../components/ui/alert";
+import { Separator } from "../components/ui/separator";
+import { Spinner } from "../components/ui/spinner";
 import { ref } from "vue";
 import { onBeforeRouteLeave, useRouter } from "vue-router";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
@@ -45,16 +49,18 @@ onBeforeRouteLeave(() => !isLoading.value && !isConfirmOpen.value);
         打开文档，添加手写签名，下载签好的 PDF。<br />常用签名保存一次，下次继续使用。
       </p>
       <div class="file-action">
-        <button
-          class="select-file"
+        <Button
+          size="lg"
+          class="min-h-[54px] px-7"
           type="button"
           :disabled="isLoading || isConfirmOpen"
           @click="fileInputRef?.click()"
         >
+          <Spinner v-if="isLoading" data-icon="inline-start" aria-label="正在打开" />
           <svg
+            v-else
             viewBox="0 0 24 24"
-            width="20"
-            height="20"
+            data-icon="inline-start"
             fill="none"
             stroke="currentColor"
             stroke-width="1.5"
@@ -63,7 +69,7 @@ onBeforeRouteLeave(() => !isLoading.value && !isConfirmOpen.value);
             <path d="M12 16V4m-4 4 4-4 4 4M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5" />
           </svg>
           {{ isLoading ? "正在打开 PDF…" : "选择 PDF 文件" }}
-        </button>
+        </Button>
         <input
           ref="fileInputRef"
           class="sr-only"
@@ -78,7 +84,9 @@ onBeforeRouteLeave(() => !isLoading.value && !isConfirmOpen.value);
         <p class="action-note" role="status">
           {{ isLoading ? "正在本地处理，请稍候。" : "仅在浏览器本地处理，无需上传" }}
         </p>
-        <p v-if="loadError" class="load-error" role="alert">{{ loadError }} 请重新选择文件。</p>
+        <Alert v-if="loadError" variant="destructive" class="mx-auto mt-3 max-w-[480px] text-left">
+          <AlertDescription>{{ loadError }} 请重新选择文件。</AlertDescription>
+        </Alert>
       </div>
 
       <figure class="signature-sample" aria-label="手写签名示例">
@@ -103,13 +111,14 @@ onBeforeRouteLeave(() => !isLoading.value && !isConfirmOpen.value);
               />
             </g>
           </svg>
-          <span class="signature-rule" aria-hidden="true"></span>
+          <Separator />
           <span class="sample-caption">你的笔迹，自然落在文档上。</span>
         </div>
         <figcaption>手写笔迹示例</figcaption>
       </figure>
     </section>
 
+    <Separator />
     <footer class="home-footer">
       <p>
         免费使用<span aria-hidden="true"> / </span>保存常用签名<span aria-hidden="true"> / </span
@@ -152,6 +161,17 @@ onBeforeRouteLeave(() => !isLoading.value && !isConfirmOpen.value);
   --home-ink: #252527;
   --home-muted: #6d6d72;
   --home-line: #dededc;
+  --background: var(--home-paper);
+  --foreground: var(--home-ink);
+  --primary: var(--home-ink);
+  --primary-foreground: #ffffff;
+  --accent: #efefed;
+  --accent-foreground: var(--home-ink);
+  --card: #ffffff;
+  --card-foreground: var(--home-ink);
+  --muted-foreground: var(--home-muted);
+  --border: var(--home-line);
+  --destructive: #a33129;
   height: 100%;
   overflow-y: auto;
   color: var(--home-ink);
@@ -217,35 +237,6 @@ h1 span {
 .file-action {
   margin-top: 30px;
 }
-.select-file {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  min-height: 54px;
-  padding: 0 28px;
-  border: 1px solid var(--home-ink);
-  border-radius: 7px;
-  background: var(--home-ink);
-  color: #fff;
-  font-size: 15px;
-  cursor: pointer;
-  transition:
-    background 0.18s,
-    transform 0.18s;
-}
-.select-file:hover:enabled {
-  background: #424246;
-  transform: translateY(-1px);
-}
-.select-file:active:enabled {
-  transform: translateY(0);
-}
-.select-file:disabled {
-  opacity: 0.6;
-  cursor: wait;
-}
-.select-file:focus-visible,
 .wordmark:focus-visible {
   outline: 2px solid #68686d;
   outline-offset: 5px;
@@ -255,12 +246,6 @@ h1 span {
   font-size: 12px;
   color: var(--home-muted);
   min-height: 18px;
-}
-.load-error {
-  margin: 12px auto 0;
-  max-width: 480px;
-  color: #a33129;
-  font-size: 13px;
 }
 .signature-sample {
   width: min(100%, 380px);
@@ -284,11 +269,6 @@ h1 span {
   width: 100%;
   height: 88px;
   color: #343b4c;
-}
-.signature-rule {
-  display: block;
-  height: 1px;
-  background: var(--home-line);
 }
 .sample-caption {
   margin-top: 10px;
@@ -316,7 +296,6 @@ figcaption {
 }
 .home-footer {
   flex-shrink: 0;
-  border-top: 1px solid var(--home-line);
   padding: 23px 0;
   display: flex;
   align-items: center;
@@ -360,9 +339,6 @@ figcaption {
 @media (prefers-reduced-motion: reduce) {
   .ink-stroke {
     animation: none;
-  }
-  .select-file {
-    transition: none;
   }
 }
 </style>

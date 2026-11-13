@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { Button } from "../components/ui/button";
+import { Alert, AlertDescription } from "../components/ui/alert";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { toast } from "vue-sonner";
 import type { Matrix6, SignaturePlacement } from "../types/pdf";
 import { exportSignedPdf } from "../lib/pdfExport";
 import { useConfirmDialog } from "../composables/useConfirmDialog";
@@ -99,19 +102,6 @@ watch(documentId, () => {
   exportBaseline.value = [];
 });
 
-const statusMessage = ref<string | null>(null);
-let statusTimer = 0;
-
-function flashStatus(message: string): void {
-  statusMessage.value = message;
-  if (statusTimer) {
-    window.clearTimeout(statusTimer);
-  }
-  statusTimer = window.setTimeout(() => {
-    statusMessage.value = null;
-  }, 3200);
-}
-
 /** 当前文档上还有未导出的修改时，换文件前先确认。 */
 function confirmDiscardEdits(): Promise<boolean> {
   return requestConfirm({
@@ -201,7 +191,7 @@ async function handleExport(): Promise<void> {
     if (session.value === currentSession) {
       exportBaseline.value = snapshot;
     }
-    flashStatus(`已导出 ${anchor.download}`);
+    toast.success(`已导出 ${anchor.download}`);
   } catch (error) {
     exportError.value = error instanceof Error ? error.message : "导出失败，请重试。";
   } finally {
@@ -217,7 +207,7 @@ const isPadOpen = ref(false);
 
 function handlePadSaved(): void {
   isPadOpen.value = false;
-  flashStatus("签名已保存到本地签名库");
+  toast.success("签名已保存到本地签名库");
 }
 
 function handleDocumentKeydown(event: KeyboardEvent): void {
@@ -248,9 +238,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener("keydown", handleDocumentKeydown);
   window.removeEventListener("beforeunload", handleBeforeUnload);
-  if (statusTimer) {
-    window.clearTimeout(statusTimer);
-  }
   closeDocument();
 });
 
@@ -297,50 +284,36 @@ const canExport = computed(() => session.value !== null && placements.value.leng
       @export-pdf="handleExport"
     />
 
-    <div
+    <Alert
       v-if="loadError"
-      class="flex items-center justify-between gap-3 border-b border-line bg-danger-soft px-4 py-2 text-meta text-danger"
-      role="alert"
+      variant="destructive"
+      class="flex items-center justify-between gap-3 rounded-none border-x-0 border-t-0"
       data-testid="banner"
       data-tone="error"
     >
-      <span>{{ loadError }}</span>
-      <button type="button" class="button button--ghost button--small" @click="clearMessages">
-        知道了
-      </button>
-    </div>
-    <div
+      <AlertDescription class="flex-1">{{ loadError }}</AlertDescription>
+      <Button type="button" variant="ghost" size="sm" @click="clearMessages"> 知道了 </Button>
+    </Alert>
+    <Alert
       v-else-if="noticeMessage"
-      class="flex items-center justify-between gap-3 border-b border-line bg-notice-soft px-4 py-2 text-meta text-notice"
+      role="status"
+      class="flex items-center justify-between gap-3 rounded-none border-x-0 border-t-0"
       data-testid="banner"
       data-tone="notice"
     >
-      <span>{{ noticeMessage }}</span>
-      <button type="button" class="button button--ghost button--small" @click="clearMessages">
-        知道了
-      </button>
-    </div>
-    <div
+      <AlertDescription class="flex-1">{{ noticeMessage }}</AlertDescription>
+      <Button type="button" variant="ghost" size="sm" @click="clearMessages"> 知道了 </Button>
+    </Alert>
+    <Alert
       v-if="exportError"
-      class="flex items-center justify-between gap-3 border-b border-line bg-danger-soft px-4 py-2 text-meta text-danger"
-      role="alert"
+      variant="destructive"
+      class="flex items-center justify-between gap-3 rounded-none border-x-0 border-t-0"
       data-testid="banner"
       data-tone="error"
     >
-      <span>导出失败：{{ exportError }}</span>
-      <button type="button" class="button button--ghost button--small" @click="exportError = null">
-        知道了
-      </button>
-    </div>
-    <div
-      v-if="statusMessage"
-      class="flex items-center justify-between gap-3 border-b border-line bg-success-soft px-4 py-2 text-meta text-success"
-      data-testid="banner"
-      data-tone="success"
-    >
-      <span>{{ statusMessage }}</span>
-    </div>
-
+      <AlertDescription class="flex-1">导出失败：{{ exportError }}</AlertDescription>
+      <Button type="button" variant="ghost" size="sm" @click="exportError = null"> 知道了 </Button>
+    </Alert>
     <main class="flex min-h-0 flex-1">
       <PageThumbnails v-if="session" :current-page="currentPage" @select="currentPage = $event" />
 
@@ -385,27 +358,11 @@ const canExport = computed(() => session.value !== null && placements.value.leng
   --text: #29292c;
   --text-muted: #6b6b70;
   --accent: #343438;
+  --accent-foreground: var(--surface);
   --accent-strong: #202023;
   --accent-soft: rgba(52, 52, 56, 0.08);
   --viewer-bg: #eeefed;
   color: var(--text);
-}
-.editor-workspace :deep(.button) {
-  min-height: 36px;
-}
-.editor-workspace :deep(.button--small) {
-  min-height: 32px;
-}
-.editor-workspace :deep(.input) {
-  min-height: 36px;
-}
-.editor-workspace :deep(.button--primary) {
-  background: var(--text);
-  border-color: var(--text);
-  color: var(--surface);
-}
-.editor-workspace :deep(.button--primary:hover:enabled) {
-  opacity: 0.85;
 }
 @media (prefers-color-scheme: dark) {
   .editor-workspace {

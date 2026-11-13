@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Button } from "./ui/button";
 import { computed, onBeforeUnmount, ref } from "vue";
 import type { PageViewport } from "pdfjs-dist";
 import type { Matrix6 } from "../types/pdf";
@@ -375,9 +376,11 @@ onBeforeUnmount(() => {
         }"
       ></div>
 
-      <button
+      <Button
         type="button"
-        class="pointer-events-auto absolute -translate-x-1/2 cursor-pointer rounded-sm border border-accent bg-surface px-2 py-[3px] text-micro text-accent-strong"
+        variant="outline"
+        size="xs"
+        class="pointer-events-auto absolute -translate-x-1/2"
         data-testid="placement-delete"
         :style="{
           left: `${selectionBox.left + selectionBox.width / 2}px`,
@@ -389,7 +392,7 @@ onBeforeUnmount(() => {
         @click.stop="handleRemovePlacement"
       >
         删除签名
-      </button>
+      </Button>
 
       <span
         v-for="handle in handlePositions"

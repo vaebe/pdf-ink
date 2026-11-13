@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
+import { Button } from "./ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
+import { Alert, AlertDescription } from "./ui/alert";
+import { Separator } from "./ui/separator";
+import { Spinner } from "./ui/spinner";
+import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from "vue";
 import SignaturePad from "signature_pad";
 import type { SignatureTemplate } from "../types/signature";
 import { useSignatureLibrary } from "../composables/useSignatureLibrary";
@@ -12,6 +20,7 @@ interface StrokeWidthOption {
   label: string;
   minWidth: number;
   maxWidth: number;
+  fontWeight: number;
 }
 
 const props = defineProps<{
@@ -32,8 +41,8 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
  * signature_pad 使用相对画布的 CSS 坐标，因此必须在高像素密度下保持一致的坐标空间。
  *
  * 这里必须读布局尺寸（offsetWidth/offsetHeight），不能用 getBoundingClientRect()：
- * 后者会把祖先元素上的 transform 一并算进来，而弹窗面板带 0.18s 入场动画
- * （panel-in：scale(0.98)），创建画笔时动画尚未结束，量到的是缩小 2% 的盒子，
+ * 后者会把祖先元素上的 transform 一并算进来，弹窗入场动画也会缩放面板。
+ * 创建画笔时动画尚未结束，测得的边界会随动画缩小，
  * 画布后备分辨率会偏小，手写区最右/最下一小条落在画布之外。
  */
 function syncCanvasResolution(): void {
@@ -74,9 +83,9 @@ const penColor = ref(DEFAULT_PEN_COLOR);
 const strokeWidth = ref<StrokeWidth>("medium");
 
 const STROKE_WIDTH_OPTIONS: readonly StrokeWidthOption[] = [
-  { value: "thin", label: "细", minWidth: 0.6, maxWidth: 2.2 },
-  { value: "medium", label: "中", minWidth: 1, maxWidth: 3.6 },
-  { value: "thick", label: "粗", minWidth: 1.8, maxWidth: 5.4 },
+  { value: "thin", label: "细", minWidth: 0.6, maxWidth: 2.2, fontWeight: 400 },
+  { value: "medium", label: "中", minWidth: 1, maxWidth: 3.6, fontWeight: 500 },
+  { value: "thick", label: "粗", minWidth: 1.8, maxWidth: 5.4, fontWeight: 700 },
 ];
 
 const selectedStrokeWidth = computed(
@@ -113,26 +122,18 @@ function handleWindowResize(): void {
   resizeKeepingInk();
 }
 
-function handleWindowKeydown(event: KeyboardEvent): void {
-  if (event.key === "Escape") {
-    event.preventDefault();
-    handleClose();
-  }
-}
-
 function attachLifecycle(): void {
   window.addEventListener("resize", handleWindowResize);
-  window.addEventListener("keydown", handleWindowKeydown);
 }
 
 function detachLifecycle(): void {
   window.removeEventListener("resize", handleWindowResize);
-  window.removeEventListener("keydown", handleWindowKeydown);
 }
 
 const formError = ref<string | null>(null);
 const mode = ref<SignatureMode>("handwriting");
 const typedText = ref("");
+const textFontWeight = computed(() => selectedStrokeWidth.value.fontWeight);
 
 function resetState(): void {
   formError.value = null;
@@ -160,15 +161,10 @@ watch(selectedStrokeWidth, (width) => {
 
 watch(
   () => props.open,
-  async (open) => {
+  (open) => {
     if (open) {
       resetState();
       attachLifecycle();
-      await nextTick();
-      if (!props.open) {
-        return;
-      }
-      createPad();
     } else {
       detachLifecycle();
       destroyPad();
@@ -265,8 +261,9 @@ async function handleModeChange(nextMode: SignatureMode): Promise<void> {
   }
 }
 
-/** 文字签名使用固定字号和字重，保持预览与保存结果一致。 */
-const TEXT_FONT = '500 64px system-ui, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif';
+/** 预览和画布共用字体与字重，画布使用更大字号生成签名图片。 */
+const TEXT_FONT_FAMILY = 'system-ui, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif';
+const textFont = computed(() => `${textFontWeight.value} 64px ${TEXT_FONT_FAMILY}`);
 
 /** 把单行文字绘制到透明画布，之后沿用手写签名的裁剪和保存流程。 */
 function renderTypedText(text: string): HTMLCanvasElement | null {
@@ -275,7 +272,7 @@ function renderTypedText(text: string): HTMLCanvasElement | null {
   if (!measureContext) {
     return null;
   }
-  measureContext.font = TEXT_FONT;
+  measureContext.font = textFont.value;
   const metrics = measureContext.measureText(text);
 
   const output = document.createElement("canvas");
@@ -285,7 +282,7 @@ function renderTypedText(text: string): HTMLCanvasElement | null {
   if (!context) {
     return null;
   }
-  context.font = TEXT_FONT;
+  context.font = textFont.value;
   context.fillStyle = penColor.value;
   context.textBaseline = "middle";
   context.fillText(text, CROP_PADDING, output.height / 2);
@@ -372,6 +369,38 @@ const COLOR_OPTIONS = [
   { value: "#d92d20", label: "红色" },
 ] as const;
 
+const textInputId = useId();
+const colorInputId = useId();
+
+// Portal 内容挂载后才能读取画布尺寸。
+function handleDialogOpen(): void {
+  createPad();
+}
+
+function handleDialogOpenChange(open: boolean): void {
+  if (!open) {
+    handleClose();
+  }
+}
+
+function handleModeSelection(value: unknown): void {
+  if (value === "handwriting" || value === "text") {
+    void handleModeChange(value);
+  }
+}
+
+function handleStrokeSelection(value: unknown): void {
+  if (value === "thin" || value === "medium" || value === "thick") {
+    strokeWidth.value = value;
+  }
+}
+
+function handleColorSelection(value: unknown): void {
+  if (typeof value === "string" && value !== "") {
+    penColor.value = value;
+  }
+}
+
 const canSave = computed(() => !isSaving.value);
 const hasContent = computed(() =>
   mode.value === "handwriting" ? hasInk.value : typedText.value.trim().length > 0,
@@ -379,85 +408,85 @@ const hasContent = computed(() =>
 </script>
 
 <template>
-  <div
-    v-if="props.open"
-    class="fixed inset-0 z-20 flex animate-scrim-in items-center justify-center bg-scrim p-5 motion-reduce:animate-none"
-    role="dialog"
-    aria-modal="true"
-    aria-label="新建签名"
-    data-testid="signature-pad-dialog"
-    @keydown.esc="handleClose"
-  >
-    <div
-      class="flex w-full max-h-[calc(100dvh-40px)] max-w-[600px] animate-panel-in flex-col gap-5 overflow-y-auto rounded-xl bg-surface p-6 shadow-panel motion-reduce:animate-none"
+  <Dialog :open="props.open" @update:open="handleDialogOpenChange">
+    <DialogContent
+      class="flex max-h-[calc(100dvh-40px)] flex-col gap-5 overflow-y-auto sm:max-w-[600px]"
+      :show-close-button="false"
+      :aria-describedby="undefined"
+      data-testid="signature-pad-dialog"
+      @open-auto-focus="handleDialogOpen"
+      @interact-outside.prevent
+      @escape-key-down.stop
     >
-      <header class="flex items-center justify-between gap-2.5">
-        <h2>新建签名</h2>
-        <button type="button" class="button button--ghost" @click="handleClose">关闭</button>
-      </header>
+      <DialogHeader class="flex-row items-center justify-between">
+        <DialogTitle>新建签名</DialogTitle>
+        <Button type="button" variant="ghost" :disabled="isSaving" @click="handleClose"
+          >关闭</Button
+        >
+      </DialogHeader>
 
-      <div class="flex gap-1 rounded-lg bg-subtle p-1" role="group" aria-label="签名输入方式">
-        <button
-          type="button"
-          class="button button--ghost flex-1"
-          :class="{ 'button--toggled': mode === 'handwriting' }"
-          :aria-pressed="mode === 'handwriting'"
-          @click="handleModeChange('handwriting')"
-        >
-          手写
-        </button>
-        <button
-          type="button"
-          class="button button--ghost flex-1"
-          :class="{ 'button--toggled': mode === 'text' }"
-          :aria-pressed="mode === 'text'"
-          @click="handleModeChange('text')"
-        >
-          文字
-        </button>
-      </div>
+      <ToggleGroup
+        type="single"
+        variant="outline"
+        class="w-full"
+        :model-value="mode"
+        :disabled="isSaving"
+        aria-label="签名输入方式"
+        @update:model-value="handleModeSelection"
+      >
+        <ToggleGroupItem value="handwriting" class="flex-1">手写</ToggleGroupItem>
+        <ToggleGroupItem value="text" class="flex-1">文字</ToggleGroupItem>
+      </ToggleGroup>
 
       <div class="flex flex-wrap items-center gap-3">
         <span class="text-meta text-ink-muted">颜色</span>
-        <div class="flex items-center gap-2" role="group" aria-label="签名颜色">
-          <button
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          :model-value="penColor"
+          aria-label="签名颜色"
+          @update:model-value="handleColorSelection"
+        >
+          <ToggleGroupItem
             v-for="option in COLOR_OPTIONS"
             :key="option.value"
-            type="button"
-            class="size-8 rounded-full border-2 transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            :class="penColor === option.value ? 'border-accent' : 'border-line-strong'"
-            :style="{ backgroundColor: option.value }"
+            :value="option.value"
             :aria-label="option.label"
-            :aria-pressed="penColor === option.value"
-            @click="penColor = option.value"
-          ></button>
-          <label class="flex items-center gap-1.5 text-meta text-ink-muted">
-            自定义
-            <input
-              v-model="penColor"
-              type="color"
-              class="h-8 w-10 cursor-pointer rounded border border-line bg-surface p-0.5"
-              aria-label="自定义签名颜色"
-            />
-          </label>
-        </div>
+          >
+            <span
+              class="size-4 rounded-full"
+              :style="{ backgroundColor: option.value }"
+              aria-hidden="true"
+            ></span>
+          </ToggleGroupItem>
+        </ToggleGroup>
+        <Label :for="colorInputId">自定义</Label>
+        <Input
+          :id="colorInputId"
+          v-model="penColor"
+          type="color"
+          class="w-10 p-0.5"
+          aria-label="自定义签名颜色"
+        />
 
-        <template v-if="mode === 'handwriting'">
-          <span class="ml-auto text-meta text-ink-muted">粗细</span>
-          <div class="flex gap-1" role="group" aria-label="笔迹粗细">
-            <button
-              v-for="option in STROKE_WIDTH_OPTIONS"
-              :key="option.value"
-              type="button"
-              class="button button--ghost button--small"
-              :class="{ 'button--toggled': strokeWidth === option.value }"
-              :aria-pressed="strokeWidth === option.value"
-              @click="strokeWidth = option.value"
-            >
-              {{ option.label }}
-            </button>
-          </div>
-        </template>
+        <span class="ml-auto text-meta text-ink-muted">粗细</span>
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          size="sm"
+          :model-value="strokeWidth"
+          :disabled="isSaving"
+          aria-label="签名粗细"
+          @update:model-value="handleStrokeSelection"
+        >
+          <ToggleGroupItem
+            v-for="option in STROKE_WIDTH_OPTIONS"
+            :key="option.value"
+            :value="option.value"
+          >
+            {{ option.label }}
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
       <div v-show="mode === 'handwriting'" class="flex flex-col gap-1.5">
@@ -471,18 +500,17 @@ const hasContent = computed(() =>
       </div>
 
       <div v-if="mode === 'text'" class="flex flex-col gap-2">
-        <label class="flex flex-col gap-1.5 text-meta text-ink-muted">
-          签名文字
-          <input
-            v-model="typedText"
-            type="text"
-            class="input"
-            placeholder="例如：张三、2026年9月20日"
-            autocomplete="off"
-            data-testid="signature-text-input"
-            @input="formError = null"
-          />
-        </label>
+        <Label :for="textInputId">签名文字</Label>
+        <Input
+          :id="textInputId"
+          v-model="typedText"
+          type="text"
+          placeholder="例如：张三、2026年9月20日"
+          autocomplete="off"
+          :aria-invalid="Boolean(formError)"
+          data-testid="signature-text-input"
+          @input="formError = null"
+        />
         <div
           class="signature-creation-surface flex h-[140px] items-center overflow-auto rounded-lg border border-dashed px-4"
           aria-label="文字签名预览"
@@ -490,8 +518,12 @@ const hasContent = computed(() =>
         >
           <span
             v-if="typedText.trim()"
-            class="mx-auto whitespace-pre text-[40px] font-medium"
-            :style="{ color: penColor }"
+            class="mx-auto whitespace-pre text-[40px]"
+            :style="{
+              color: penColor,
+              fontFamily: TEXT_FONT_FAMILY,
+              fontWeight: textFontWeight,
+            }"
           >
             {{ typedText.trim() }}
           </span>
@@ -499,31 +531,27 @@ const hasContent = computed(() =>
         </div>
       </div>
 
-      <p v-if="formError" class="text-meta text-danger" role="alert" data-testid="pad-error">
-        {{ formError }}
-      </p>
+      <Alert v-if="formError" variant="destructive" data-testid="pad-error">
+        <AlertDescription>{{ formError }}</AlertDescription>
+      </Alert>
 
-      <footer class="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
-        <button
-          type="button"
-          class="button button--ghost"
-          :disabled="!hasContent"
-          @click="handleClear"
-        >
+      <Separator />
+      <DialogFooter
+        class="flex-row flex-wrap items-center justify-between gap-3 sm:justify-between"
+      >
+        <Button type="button" variant="ghost" :disabled="!hasContent" @click="handleClear">
           {{ mode === "handwriting" ? "清空重写" : "清空输入" }}
-        </button>
+        </Button>
         <div class="flex gap-2">
-          <button type="button" class="button button--ghost" @click="handleClose">取消</button>
-          <button
-            type="button"
-            class="button button--primary"
-            :disabled="!canSave"
-            @click="handleSave"
+          <Button type="button" variant="ghost" :disabled="isSaving" @click="handleClose"
+            >取消</Button
           >
+          <Button type="button" variant="default" :disabled="!canSave" @click="handleSave">
+            <Spinner v-if="isSaving" data-icon="inline-start" aria-label="正在保存" />
             {{ isSaving ? "保存中…" : "保存到签名库" }}
-          </button>
+          </Button>
         </div>
-      </footer>
-    </div>
-  </div>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>

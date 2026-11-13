@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Alert, AlertDescription } from "./ui/alert";
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from "vue";
 import { RenderingCancelledException, TextLayer } from "pdfjs-dist";
 import type { PDFPageProxy, PageViewport, RenderTask } from "pdfjs-dist";
@@ -399,12 +400,12 @@ watch(session, () => {
 
     <SignatureOverlay :page-index="props.pageIndex" :viewport="viewport" />
 
-    <p
+    <Alert
       v-if="renderError"
-      class="absolute left-2 top-2 rounded-sm bg-danger-soft px-2 py-1 text-micro text-danger"
-      role="alert"
+      variant="destructive"
+      class="absolute left-2 top-2 w-[calc(100%-1rem)]"
     >
-      {{ renderError }}
-    </p>
+      <AlertDescription>{{ renderError }}</AlertDescription>
+    </Alert>
   </div>
 </template>

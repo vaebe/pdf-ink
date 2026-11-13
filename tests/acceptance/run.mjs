@@ -168,16 +168,13 @@ export async function runAcceptance(onCheck) {
       title: (await dialog.locator("[data-testid=confirm-title]").innerText()).trim(),
       message: (await dialog.locator("[data-testid=confirm-message]").innerText()).trim(),
       details: await dialog.locator("[data-testid=confirm-details] li").allInnerTexts(),
-      buttons: await dialog.locator("[data-testid=confirm-actions] .button").allInnerTexts(),
+      buttons: (await dialog.locator("[data-testid=confirm-actions] button").allInnerTexts()).map(
+        (label) => label.trim(),
+      ),
       /** 弹窗打开时的初始焦点文案，用于确认默认落在「取消」上。 */
       focusedLabel: await page.evaluate(() => document.activeElement?.textContent?.trim() ?? ""),
       /** 弹窗打开期间工具栏是否有加载态。 */
-      toolbarLabel: (
-        await page
-          .locator("[data-testid=toolbar] button")
-          .filter({ hasText: /^(打开 PDF|正在打开…)$/ })
-          .innerText()
-      ).trim(),
+      toolbarLabel: (await page.locator("[data-testid=open-pdf]").innerText()).trim(),
     };
     if (beforeClick) {
       await beforeClick(captured, dialog);
@@ -1204,7 +1201,7 @@ export async function runAcceptance(onCheck) {
       // 定位走 data-testid：按钮文案改过一次（适合宽度 → 自适应宽度），绑文字会跟着一起烂。
       const fitToggled = await hidpiPage
         .locator("[data-testid=fit-width]")
-        .evaluate((element) => element.classList.contains("button--toggled"));
+        .evaluate((element) => element.getAttribute("aria-pressed") === "true");
       if (!fitToggled) {
         await hidpiPage.locator("[data-testid=fit-width]").click();
         await hidpiPage.waitForTimeout(500);
@@ -1317,14 +1314,12 @@ export async function runAcceptance(onCheck) {
     );
     await hidpiPage.screenshot({ path: `${OUT}/A6-dpr2.png` });
 
-    // 切换态回归：`.button--ghost:enabled:hover`(0,3,0) 特异性高于 `.button--toggled`(0,1,0)，
-    // 少了同层的 toggled hover 规则，激活按钮一悬停就会掉回普通 ghost 配色。
-    // 同时用「缩小」这个真 ghost 按钮做对照，确认 ghost 自己的 hover 仍然生效。
+    // 激活的 Toggle 在悬停时保持激活配色，同时确认普通 ghost 按钮的 hover 仍生效。
     // 放在截图之后，避免截图里鼠标停在按钮上。
     const fitButton = hidpiPage.locator("[data-testid=fit-width]");
     const plainGhost = hidpiPage.locator('[data-testid=toolbar] button[title="缩小"]');
-    const fitToggledBefore = await fitButton.evaluate((element) =>
-      element.classList.contains("button--toggled"),
+    const fitToggledBefore = await fitButton.evaluate(
+      (element) => element.getAttribute("aria-pressed") === "true",
     );
     if (!fitToggledBefore) {
       await fitButton.click();
@@ -1336,7 +1331,7 @@ export async function runAcceptance(onCheck) {
         return {
           border: style.borderTopColor,
           bg: style.backgroundColor,
-          toggled: element.classList.contains("button--toggled"),
+          toggled: element.getAttribute("aria-pressed") === "true",
         };
       });
     const fitResting = await readButtonStyle(fitButton);
@@ -1350,10 +1345,9 @@ export async function runAcceptance(onCheck) {
     check(
       "A6-3 切换态按钮 hover 保持激活配色，普通 ghost 的 hover 仍生效",
       fitHovered.toggled &&
-        fitResting.border !== ghostResting.border &&
+        fitResting.bg !== ghostResting.bg &&
         fitHovered.border === fitResting.border &&
         fitHovered.bg === fitResting.bg &&
-        ghostHovered.border !== ghostResting.border &&
         ghostHovered.bg !== ghostResting.bg,
       `切换态 静止=${fitResting.border}/${fitResting.bg} hover=${fitHovered.border}/${fitHovered.bg}；对照 ghost（缩小）静止=${ghostResting.border}/${ghostResting.bg} hover=${ghostHovered.border}/${ghostHovered.bg}`,
     );
@@ -2261,11 +2255,8 @@ export async function runAcceptance(onCheck) {
     );
 
     // ---- A16-1 / A16-2 点击弹窗正文后的键盘可用性 ----
-    // 有未导出的编辑时切换文档会先弹「放弃当前编辑」。点击正文（不可聚焦内容）曾让焦点
-    // 落到 document.body —— 弹窗面板不是可聚焦祖先，键盘事件不再经过组件，Esc 直接失效。
-    // A16-1 断言机制（焦点归属），A16-2 断言用户可感知的结果（Esc 关闭）。
-    // 摘掉 tabindex 的对照实测：activeElement=<BODY>、在弹窗内=false、Esc 后关闭=false、
-    // 且键盘事件不再进入组件；恢复后三条同时成立 —— 因此这两条都能区分新旧实现。
+    // 有未导出的编辑时切换文档会先弹「放弃当前编辑」。
+    // AlertDialog 管理焦点，点击正文后焦点必须留在弹窗内，且 Esc 仍可关闭。
     const focusDialog = cryptoPage.locator("[data-testid=confirm-dialog]");
     await cryptoPage
       .locator("[data-testid=toolbar] input[type=file]")
@@ -2281,15 +2272,14 @@ export async function runAcceptance(onCheck) {
       return {
         tag: active?.tagName ?? null,
         role: active?.getAttribute?.("role") ?? null,
-        isPanel: active === document.querySelector("[data-testid=confirm-dialog] [role=dialog]"),
         inside: Boolean(active?.closest?.("[data-testid=confirm-dialog]")),
         isBody: active === document.body,
       };
     });
     check(
-      "A16-1 点击确认框正文后，焦点落到弹窗面板而不是 document.body",
-      focusAfterBodyClick.isPanel && !focusAfterBodyClick.isBody,
-      `点正文后 activeElement=<${focusAfterBodyClick.tag}> role=${focusAfterBodyClick.role}，是 dialog 面板=${focusAfterBodyClick.isPanel}，在弹窗内=${focusAfterBodyClick.inside}，是 body=${focusAfterBodyClick.isBody}。旧实现：焦点落到 body，键盘事件不再经过弹窗组件`,
+      "A16-1 点击确认框正文后，焦点保留在弹窗内",
+      focusAfterBodyClick.inside && !focusAfterBodyClick.isBody,
+      `点正文后 activeElement=<${focusAfterBodyClick.tag}> role=${focusAfterBodyClick.role}，在弹窗内=${focusAfterBodyClick.inside}，是 body=${focusAfterBodyClick.isBody}。旧实现：焦点落到 body，键盘事件不再经过弹窗组件`,
     );
 
     await cryptoPage.keyboard.press("Escape");
@@ -2306,14 +2296,7 @@ export async function runAcceptance(onCheck) {
       `Esc 后关闭=${closedByEscape}（旧实现为 false），会话仍为 ${sessionAfterEscape}。Esc 是这次修复唯一被用户直接感知的效果`,
     );
 
-    // ---- A16-3 反向对照：焦点落在面板上时，Shift+Tab 不得越出弹窗 ----
-    // 这条守的不是「原来的 bug」（旧实现里焦点在 body，浏览器把点击位置当起点，
-    // Shift+Tab 反而留在弹窗内），而是 tabindex 修复自身带来的副作用：
-    // 焦点落到面板后，面板既不是 first 也算 inside，只判断这两者就会走浏览器默认行为，
-    // 把焦点交给遮罩背后的工具栏。实测（探针 focus-probe.mjs）：
-    //   修复前：点击正文 → Shift+Tab → <BUTTON>「新建签名」在弹窗内=false
-    //   修复后：点击正文 → Shift+Tab → <BUTTON>「放弃并打开」在弹窗内=true
-    // 与 A14-7 同类：为「过度修复/修复副作用」设的反向断言。
+    // ---- A16-3 点击正文后，Shift+Tab 与 Tab 均不得越出弹窗 ----
     await cryptoPage
       .locator("[data-testid=toolbar] input[type=file]")
       .setInputFiles(`${FIX}/sig-field-signed.pdf`);
@@ -2323,11 +2306,10 @@ export async function runAcceptance(onCheck) {
     // 循环顺序按运行时读到的按钮来判，不写死文案：这一段拿到的是「放弃当前编辑」弹窗
     //（有未导出的编辑），它的确认按钮是「放弃并打开」，与数字签名弹窗不同名。
     const dialogButtons = (
-      await focusDialog.locator("[data-testid=confirm-actions] .button").allInnerTexts()
+      await focusDialog.locator("[data-testid=confirm-actions] button").allInnerTexts()
     ).map((label) => label.trim());
     const tabWalk = [];
-    // 第一步必须从 dialog 面板自身执行 Shift+Tab，直接覆盖
-    // `active === panelRef.value` 分支；之后再验证正向与反向循环。
+    // 从点击正文后的焦点开始，验证正向与反向循环。
     for (const key of ["Shift+Tab", "Tab", "Shift+Tab", "Shift+Tab"]) {
       await cryptoPage.keyboard.press(key);
       await cryptoPage.waitForTimeout(60);

@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Toggle } from "./ui/toggle";
+import { Separator } from "./ui/separator";
+import { Spinner } from "./ui/spinner";
 import { ref, watch } from "vue";
 
 const props = defineProps<{
@@ -57,10 +63,6 @@ function commitPage(): void {
   emit("update:currentPage", clamped - 1);
 }
 
-function toggleFitWidth(): void {
-  emit("update:fitWidth", !props.fitWidth);
-}
-
 const fileInputRef = ref<HTMLInputElement | null>(null);
 </script>
 
@@ -77,15 +79,13 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
     </div>
 
     <div class="toolbar-tools">
+      <Separator orientation="vertical" class="self-stretch" />
       <div class="flex items-center gap-1.5">
-        <label
-          class="flex items-center gap-1.5 text-meta text-ink-muted"
-          data-testid="page-indicator"
-        >
+        <Label class="flex items-center gap-1.5" data-testid="page-indicator">
           <span>页码</span>
-          <input
+          <Input
             v-model="pageInput"
-            class="input w-14 px-1.5 py-[5px] text-center"
+            class="w-14 px-1.5 text-center"
             data-testid="page-input"
             type="text"
             inputmode="numeric"
@@ -95,98 +95,101 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
             @blur="commitPage"
           />
           <span>/ {{ Math.max(props.pageCount, 1) }}</span>
-        </label>
+        </Label>
       </div>
 
+      <Separator orientation="vertical" class="self-stretch" />
       <div class="flex items-center gap-1.5">
-        <button
+        <Button
           type="button"
-          class="button button--ghost"
+          variant="ghost"
           :disabled="props.pageCount === 0"
           aria-label="缩小"
           title="缩小"
           @click="emit('zoomOut')"
         >
           −
-        </button>
+        </Button>
         <span
           class="min-w-[52px] text-center text-meta text-ink-muted tabular-nums"
           data-testid="zoom-level"
         >
           {{ Math.round(props.effectiveScale * 100) }}%
         </span>
-        <button
+        <Button
           type="button"
-          class="button button--ghost"
+          variant="ghost"
           :disabled="props.pageCount === 0"
           aria-label="放大"
           title="放大"
           @click="emit('zoomIn')"
         >
           ＋
-        </button>
-        <button
+        </Button>
+        <Toggle
           type="button"
-          class="button button--ghost"
-          :class="{ 'button--toggled': props.fitWidth }"
+          :model-value="props.fitWidth"
           :disabled="props.pageCount === 0"
           title="自适应宽度（页面宽度跟随窗口）"
-          :aria-pressed="props.fitWidth"
           data-testid="fit-width"
-          @click="toggleFitWidth"
+          @update:model-value="emit('update:fitWidth', $event)"
         >
           自适应宽度
-        </button>
+        </Toggle>
       </div>
 
+      <Separator orientation="vertical" class="self-stretch" />
       <div class="flex items-center gap-1.5">
-        <button
+        <Button
           type="button"
-          class="button button--ghost"
+          variant="ghost"
           :disabled="!props.canUndo"
           title="撤销（⌘/Ctrl + Z）"
           @click="emit('undo')"
         >
           撤销
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          class="button button--ghost"
+          variant="ghost"
           :disabled="!props.canRedo"
           title="重做（⌘/Ctrl + Shift + Z）"
           @click="emit('redo')"
         >
           重做
-        </button>
-        <button
+        </Button>
+        <Button
           v-if="props.isPlacing"
           type="button"
-          class="button button--ghost"
+          variant="ghost"
           title="退出放置模式（Esc）"
           @click="emit('cancelPlacement')"
         >
           退出放置
-        </button>
+        </Button>
       </div>
     </div>
     <div class="toolbar-export flex items-center justify-end gap-1.5">
-      <button
+      <Button
         type="button"
-        class="button button--primary"
+        variant="default"
         :disabled="!props.canExport || props.isExporting"
         :title="props.canExport ? '导出带签名的 PDF' : '请先在页面上放置签名'"
         @click="emit('exportPdf')"
       >
+        <Spinner v-if="props.isExporting" data-icon="inline-start" aria-label="正在导出" />
         {{ props.isExporting ? "正在导出…" : "下载签名后的 PDF" }}
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
-        class="button button--ghost"
+        variant="ghost"
+        data-testid="open-pdf"
         :disabled="props.isLoading"
         @click="fileInputRef?.click()"
       >
+        <Spinner v-if="props.isLoading" data-icon="inline-start" aria-label="正在打开" />
         {{ props.isLoading ? "正在打开…" : "打开 PDF" }}
-      </button>
+      </Button>
       <input
         ref="fileInputRef"
         class="sr-only"
@@ -215,9 +218,6 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
   flex: 1 0 170px;
   max-width: 320px;
 }
-.toolbar-file .button {
-  flex-shrink: 0;
-}
 .toolbar-export {
   flex-shrink: 0;
   margin-left: auto;
@@ -227,19 +227,5 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
   flex-shrink: 0;
   align-items: center;
   gap: 12px;
-  border-left: 1px solid var(--border);
-  padding-left: 12px;
-}
-.toolbar-tools > div + div {
-  border-left: 1px solid var(--border);
-  padding-left: 12px;
-}
-.toolbar-tools .button--ghost:not(.button--toggled) {
-  border-color: transparent;
-  background: transparent;
-}
-.toolbar-tools .button--ghost:not(.button--toggled):hover:enabled {
-  background: var(--surface-muted);
-  border-color: var(--border);
 }
 </style>
